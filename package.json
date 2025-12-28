@@ -1,0 +1,23 @@
+{
+  "name": "rps-retro",
+  "version": "1.0.0",
+  "description": "Juego retro de Piedra Papel o Tijera",
+  "main": "src/main.js",
+  "scripts": {
+    "sync": "powershell -Command \"Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; npx cap sync\"",
+    "force-android": "powershell -Command \"cd android; .\\gradlew installDebug\"",
+    "update": "npm run sync && npm run force-android",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
+    "capacitor-plugin-safe-area": "^4.0.3"
+  }
+}

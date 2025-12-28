@@ -1,0 +1,20 @@
+html, body { 
+    margin: 0; 
+    background-color: #000000 !important; 
+    overflow: hidden; 
+}
+
+/* Hace que los píxeles se vean nítidos (Estilo Retro) */
+canvas { 
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Este es el truco para que la fuente cargue sin errores */
+.font-loader {
+    font-family: 'Press Start 2P';
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}

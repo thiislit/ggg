@@ -1,0 +1,18 @@
+# Node
+node_modules/
+npm-debug.log
+
+# Android
+android/app/build/
+android/.gradle/
+android/local.properties
+.gradle/
+build/
+
+# iOS
+ios/App/App.xcworkspace/xcuserdata
+ios/App/Pods/
+
+# System
+.DS_Store
+Thumbs.db

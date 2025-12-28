@@ -1,0 +1,228 @@
+export class BackgroundScene extends Phaser.Scene {
+    constructor() {
+        super('BackgroundScene');
+    }
+
+    create() {
+        const width = this.scale.width;
+        const height = this.scale.height;
+
+        // Evitar error de textura duplicada al reiniciar la escena
+        if (this.textures.exists('spaceBackground')) {
+            this.textures.remove('spaceBackground');
+        }
+
+        // Crear una textura dinámica basada en Canvas
+        this.canvasTexture = this.textures.createCanvas('spaceBackground', width, height);
+        this.ctx = this.canvasTexture.getContext();
+        
+        // Inicializar nuestros sistemas (copiado y adaptado del Lab)
+        this.particles = [];
+        this.planets = [];
+        this.nebula = [];
+        
+        // 1. Fondo Estático (Lo pintamos una vez en un canvas separado en memoria)
+        this.staticBg = document.createElement('canvas');
+        this.staticBg.width = width;
+        this.staticBg.height = height;
+        const staticCtx = this.staticBg.getContext('2d');
+        this.createStaticStarfield(staticCtx, width, height);
+
+        // 2. Crear elementos dinámicos
+        this.createNebula(width, height);
+        this.createPlanets(width, height);
+        this.createParticles(width, height);
+
+        // Añadir la imagen al mundo (es lo que se verá)
+        this.bgImage = this.add.image(0, 0, 'spaceBackground').setOrigin(0);
+        this.bgImage.setDepth(-100); // Asegurar que esté al fondo
+    }
+
+    update(time, delta) {
+        const width = this.scale.width;
+        const height = this.scale.height;
+
+        // 1. Limpiar y pintar fondo estático
+        this.ctx.drawImage(this.staticBg, 0, 0);
+
+        // 2. Actualizar y Dibujar Nebulosa
+        this.updateAndDrawNebula(width, height);
+
+        // 3. Actualizar y Dibujar Planetas
+        this.updateAndDrawPlanets(width, height);
+
+        // 4. Actualizar y Dibujar Partículas
+        this.updateAndDrawParticles(width, height);
+
+        // ¡Importante! Decirle a Phaser que la textura cambió
+        this.canvasTexture.refresh();
+    }
+
+    // --- LÓGICA DEL LABORATORIO ADAPTADA ---
+
+    createStaticStarfield(ctx, w, h) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, w, h);
+        for(let i=0; i<1000; i++) {
+            const x = Math.random() * w;
+            const y = Math.random() * h;
+            const isBright = Math.random() > 0.95;
+            const radius = isBright ? 1.5 : 0.5;
+            const alpha = isBright ? 0.4 : 0.15;
+            const glowScale = isBright ? 6 : 3;
+
+            const g = ctx.createRadialGradient(x, y, 0, x, y, radius * glowScale);
+            g.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(x, y, radius * glowScale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    createNebula(w, h) {
+        const count = 8; 
+        for(let i=0; i<count; i++) {
+            const colors = ['rgba(100, 0, 150, 0.03)', 'rgba(0, 50, 100, 0.03)', 'rgba(50, 0, 50, 0.03)'];
+            this.nebula.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                baseX: Math.random() * w,
+                radius: 300 + Math.random() * 400,
+                speed: 0.02 + Math.random() * 0.05,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                offset: Math.random() * 100
+            });
+        }
+    }
+
+    createPlanets(w, h) {
+        const count = 400; 
+        for(let i=0; i<count; i++) {
+            const colors = ['#FFFFFF', '#FFFFFF', '#FF00FF', '#00FFFF', '#FFFF00']; 
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const isDistant = Math.random() > 0.15;
+            const radius = isDistant ? 0.3 + Math.random() : 2 + Math.random() * 3;
+            const speed = isDistant ? 0.005 + Math.random() * 0.01 : 0.02 + Math.random() * 0.03;
+            
+            this.planets.push({
+                baseX: Math.random() * w,
+                x: 0,
+                y: Math.random() * h,
+                radius: radius,
+                speed: speed,
+                color: color,
+                offset: Math.random() * 100
+            });
+        }
+    }
+
+    createParticles(w, h) {
+        const count = 120;
+        for(let i=0; i<count; i++) {
+            const palette = ['155, 89, 182', '243, 156, 18', '231, 76, 60', '142, 68, 173', '255, 255, 255', '241, 196, 15'];
+            const color = palette[Math.floor(Math.random() * palette.length)];
+            const type = Math.floor(Math.random() * 4);
+            const isFaint = Math.random() < 0.2;
+            
+            let size = 0, speed = 0, baseAlpha = 0;
+            if (type === 0) { size = 1 + Math.random(); speed = 0.05 + Math.random() * 0.1; baseAlpha = isFaint ? 0.1 : 0.3; } 
+            else if (type === 1) { size = 3; speed = 0.05 + Math.random() * 0.05; baseAlpha = isFaint ? 0.15 : 0.5; }
+            else { size = 4 + Math.random() * 2; speed = 0.1 + Math.random() * 0.1; baseAlpha = isFaint ? 0.3 : 0.8; }
+
+            this.particles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                driftX: (Math.random() - 0.5) * 0.1,
+                speed: speed, size: size, 
+                baseAlpha: baseAlpha, alpha: baseAlpha,
+                blinkSpeed: Math.random() * 0.05,
+                offset: Math.random() * 100,
+                color: color, type: type
+            });
+        }
+    }
+
+    updateAndDrawNebula(w, h) {
+        this.ctx.save();
+        this.nebula.forEach(n => {
+            n.y -= n.speed;
+            n.x = n.baseX + Math.sin(n.y * 0.002 + n.offset) * 50; 
+            if (n.y < -n.radius * 2) { n.y = h + n.radius * 2; n.baseX = Math.random() * w; }
+
+            const g = this.ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.radius);
+            g.addColorStop(0, n.color);
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            this.ctx.fillStyle = g;
+            this.ctx.beginPath();
+            this.ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+        this.ctx.restore();
+    }
+
+    updateAndDrawPlanets(w, h) {
+        this.ctx.save();
+        this.planets.forEach((p, index) => {
+            p.y -= p.speed;
+            p.x = p.baseX + Math.sin(p.y * 0.005 + p.offset) * 10;
+            if (p.y < -p.radius * 2) { p.y = h + p.radius * 2; p.baseX = Math.random() * w; }
+
+            const isFlare = index % 2 === 0;
+            if (isFlare && p.radius > 1) {
+                const flareSize = p.radius * 1.8;
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                this.ctx.moveTo(p.x - flareSize, p.y);
+                this.ctx.quadraticCurveTo(p.x, p.y, p.x, p.y - flareSize);
+                this.ctx.quadraticCurveTo(p.x, p.y, p.x + flareSize, p.y);
+                this.ctx.quadraticCurveTo(p.x, p.y, p.x, p.y + flareSize);
+                this.ctx.quadraticCurveTo(p.x, p.y, p.x - flareSize, p.y);
+                this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+                this.ctx.fill();
+            } else {
+                this.ctx.beginPath();
+                if (p.radius > 2) {
+                    const glowSize = p.radius * 4;
+                    const g = this.ctx.createRadialGradient(p.x, p.y, p.radius * 0.2, p.x, p.y, glowSize);
+                    g.addColorStop(0, p.color);
+                    g.addColorStop(1, 'rgba(0,0,0,0)');
+                    this.ctx.fillStyle = g;
+                    this.ctx.arc(p.x, p.y, glowSize, 0, Math.PI * 2);
+                } else {
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.arc(Math.floor(p.x), Math.floor(p.y), p.radius, 0, Math.PI * 2);
+                }
+                this.ctx.fill();
+            }
+        });
+        this.ctx.restore();
+    }
+
+    updateAndDrawParticles(w, h) {
+        this.particles.forEach(p => {
+            p.y -= p.speed; 
+            p.x += p.driftX;
+            p.alpha = p.baseAlpha + Math.sin(Date.now() * p.blinkSpeed + p.offset) * 0.2;
+            if (p.alpha < 0.1) p.alpha = 0.1;
+            if (p.alpha > 1) p.alpha = 1;
+            if (p.y < -20) { p.y = h + 20; p.x = Math.random() * w; }
+            if (p.x < -50) p.x = w + 50;
+            if (p.x > w + 50) p.x = -50;
+
+            this.ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
+            const x = Math.floor(p.x);
+            const y = Math.floor(p.y);
+            const s = p.size;
+            switch(p.type) {
+                case 0: this.ctx.fillRect(x, y, s, s); break;
+                case 1: this.ctx.fillRect(x, y, s, s); this.ctx.fillRect(x - s, y, s, s); this.ctx.fillRect(x + s, y, s, s); this.ctx.fillRect(x, y - s, s, s); this.ctx.fillRect(x, y + s, s, s); break;
+                case 2: this.ctx.strokeRect(x, y, s * 2, s * 2); this.ctx.strokeStyle = `rgba(${p.color}, ${p.alpha})`; this.ctx.lineWidth = 1; break;
+                case 3: this.ctx.fillRect(x, y, s * 1.5, s * 1.5); this.ctx.fillRect(x - s, y + s/2, s * 3.5, 1); break;
+            }
+        });
+    }
+}
