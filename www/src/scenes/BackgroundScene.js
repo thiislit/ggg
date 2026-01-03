@@ -123,23 +123,24 @@ export class BackgroundScene extends Phaser.Scene {
         for(let i=0; i<count; i++) {
             const palette = ['155, 89, 182', '243, 156, 18', '231, 76, 60', '142, 68, 173', '255, 255, 255', '241, 196, 15'];
             const color = palette[Math.floor(Math.random() * palette.length)];
-            const type = Math.floor(Math.random() * 4);
-            const isFaint = Math.random() < 0.2;
             
-            let size = 0, speed = 0, baseAlpha = 0;
-            if (type === 0) { size = 1 + Math.random(); speed = 0.05 + Math.random() * 0.1; baseAlpha = isFaint ? 0.1 : 0.3; } 
-            else if (type === 1) { size = 3; speed = 0.05 + Math.random() * 0.05; baseAlpha = isFaint ? 0.15 : 0.5; }
-            else { size = 4 + Math.random() * 2; speed = 0.1 + Math.random() * 0.1; baseAlpha = isFaint ? 0.3 : 0.8; }
+            // Simplificamos: Ya no hay tipos complejos, solo partículas simples
+            const isFaint = Math.random() < 0.2;
+            let size = 1 + Math.random() * 2; // Tamaño variado pero pequeño
+            let speed = 0.05 + Math.random() * 0.1;
+            let baseAlpha = isFaint ? 0.2 : 0.6;
 
             this.particles.push({
                 x: Math.random() * w,
                 y: Math.random() * h,
                 driftX: (Math.random() - 0.5) * 0.1,
-                speed: speed, size: size, 
-                baseAlpha: baseAlpha, alpha: baseAlpha,
+                speed: speed, 
+                size: size, 
+                baseAlpha: baseAlpha, 
+                alpha: baseAlpha,
                 blinkSpeed: Math.random() * 0.05,
                 offset: Math.random() * 100,
-                color: color, type: type
+                color: color
             });
         }
     }
@@ -209,20 +210,28 @@ export class BackgroundScene extends Phaser.Scene {
             p.alpha = p.baseAlpha + Math.sin(Date.now() * p.blinkSpeed + p.offset) * 0.2;
             if (p.alpha < 0.1) p.alpha = 0.1;
             if (p.alpha > 1) p.alpha = 1;
-            if (p.y < -20) { p.y = h + 20; p.x = Math.random() * w; }
-            if (p.x < -50) p.x = w + 50;
-            if (p.x > w + 50) p.x = -50;
+            
+            // Loop infinito
+            if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+            if (p.x < -10) p.x = w + 10;
+            if (p.x > w + 10) p.x = -10;
 
-            this.ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
-            const x = Math.floor(p.x);
-            const y = Math.floor(p.y);
+            // Dibujar como círculos suaves (estrellas) en lugar de cuadrados/malla
+            const x = p.x;
+            const y = p.y;
             const s = p.size;
-            switch(p.type) {
-                case 0: this.ctx.fillRect(x, y, s, s); break;
-                case 1: this.ctx.fillRect(x, y, s, s); this.ctx.fillRect(x - s, y, s, s); this.ctx.fillRect(x + s, y, s, s); this.ctx.fillRect(x, y - s, s, s); this.ctx.fillRect(x, y + s, s, s); break;
-                case 2: this.ctx.strokeRect(x, y, s * 2, s * 2); this.ctx.strokeStyle = `rgba(${p.color}, ${p.alpha})`; this.ctx.lineWidth = 1; break;
-                case 3: this.ctx.fillRect(x, y, s * 1.5, s * 1.5); this.ctx.fillRect(x - s, y + s/2, s * 3.5, 1); break;
-            }
+            
+            // Glow suave
+            // const g = this.ctx.createRadialGradient(x, y, 0, x, y, s * 2);
+            // g.addColorStop(0, `rgba(${p.color}, ${p.alpha})`);
+            // g.addColorStop(1, 'rgba(0,0,0,0)');
+            // this.ctx.fillStyle = g;
+            
+            // Por rendimiento, usamos círculos sólidos con fillStyle directo (más rápido que gradientes por partícula)
+            this.ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, s, 0, Math.PI * 2);
+            this.ctx.fill();
         });
     }
 }

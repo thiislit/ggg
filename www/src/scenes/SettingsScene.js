@@ -21,12 +21,12 @@ export class SettingsScene extends Phaser.Scene {
         this.bg.on('pointerdown', (pointer, localX, localY, event) => event.stopPropagation());
 
         // 2. Título
-        this.title = this.add.text(width / 2, height * 0.12, "OPCIONES", {
+        this.title = this.add.text(width / 2, height * 0.12, "OPTIONS", {
             fontFamily: '"Press Start 2P"', fontSize: '28px', fill: colors.text
         }).setOrigin(0.5);
 
         // 3. Volumen
-        this.volLabel = this.add.text(width / 2, height * 0.25, "VOLUMEN", {
+        this.volLabel = this.add.text(width / 2, height * 0.25, "VOLUME", {
             fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
         }).setOrigin(0.5);
 
@@ -43,58 +43,202 @@ export class SettingsScene extends Phaser.Scene {
             this.sound.setVolume((clampedX - minX) / 200);
         });
 
-        // 4. Vibración
+        // 4. Vibración (SWITCH VISUAL B&N)
         const savedVib = await Storage.get('vibrate', 'true');
         this.vibrateEnabled = (savedVib !== 'false');
-        
-        this.vibBtn = this.add.text(width / 2, height * 0.48, `VIBRACION: ${this.vibrateEnabled ? 'ON' : 'OFF'}`, {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        this.vibBtn.on('pointerdown', () => {
-            // this.sound.play('sfx_reveal', { volume: 0.5, detune: 200 });
+        const vibRow = this.add.container(width / 2, height * 0.48);
+        this.vibLabel = this.add.text(-100, 0, "VIBRATION", {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
+        }).setOrigin(0, 0.5);
+
+        // Contenedor del Switch
+        const switchW = 80;
+        const switchH = 30;
+        const switchX = 50; 
+        
+        // Fondo dinámico (Graphics)
+        const switchBg = this.add.graphics();
+        
+        // Textos ON/OFF internos
+        const offText = this.add.text(switchX + 15, 0, "OFF", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff' }).setOrigin(0.5);
+        const onText = this.add.text(switchX + 65, 0, "ON", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff' }).setOrigin(0.5);
+
+        const handle = this.add.circle(this.vibrateEnabled ? switchX + 65 : switchX + 15, 0, 14, 0xffffff); // Handle siempre blanco pero cambiante de color si fondo es blanco? No, handle blanco, fondo cambia.
+        
+        // Mejor: Handle NEGRO si el fondo es BLANCO, Handle BLANCO si el fondo es NEGRO.
+        // O Handle siempre BLANCO y fondo NEGRO (OFF) -> BLANCO (ON)
+
+        const drawSwitch = (enabled) => {
+            switchBg.clear();
+            if (enabled) {
+                // Estado ON: Fondo Blanco, Borde Blanco
+                switchBg.fillStyle(0xffffff, 1);
+                switchBg.fillRoundedRect(switchX, -15, switchW, switchH, 15);
+                
+                // Textos invierten color para verse sobre blanco
+                offText.setFill('#000000');
+                onText.setFill('#000000'); // Tapado por handle de todas formas
+                handle.setFillStyle(0x000000); // Handle Negro sobre fondo blanco
+            } else {
+                // Estado OFF: Fondo Negro, Borde Blanco
+                switchBg.lineStyle(2, 0xffffff);
+                switchBg.strokeRoundedRect(switchX, -15, switchW, switchH, 15);
+                switchBg.fillStyle(0x000000, 1);
+                switchBg.fillRoundedRect(switchX, -15, switchW, switchH, 15);
+
+                // Textos blancos sobre fondo negro
+                offText.setFill('#ffffff');
+                onText.setFill('#ffffff');
+                handle.setFillStyle(0xffffff); // Handle Blanco sobre fondo negro
+            }
+        };
+
+        drawSwitch(this.vibrateEnabled);
+
+        const toggleArea = this.add.rectangle(switchX + 40, 0, switchW, switchH, 0x000000, 0)
+            .setInteractive({ useHandCursor: true });
+
+        const updateSwitch = (enabled) => {
+            this.tweens.add({
+                targets: handle,
+                x: enabled ? switchX + 65 : switchX + 15,
+                duration: 200,
+                ease: 'Power2',
+                onStart: () => drawSwitch(enabled) // Redibujar colores al iniciar cambio
+            });
+        };
+
+        toggleArea.on('pointerdown', () => {
             this.vibrateEnabled = !this.vibrateEnabled;
             Storage.set('vibrate', this.vibrateEnabled);
-            this.vibBtn.setText(`VIBRACION: ${this.vibrateEnabled ? 'ON' : 'OFF'}`);
+            updateSwitch(this.vibrateEnabled);
             if (this.vibrateEnabled && navigator.vibrate) navigator.vibrate(50);
         });
 
-        // 5. Fondo (Antes Tema)
+        vibRow.add([this.vibLabel, switchBg, offText, onText, handle, toggleArea]);
+
+        // 5. Fondo (SWITCH VISUAL B&N)
         let bgDim = await Storage.get('bgDim', 'false') === 'true';
         
-        this.bgBtn = this.add.text(width / 2, height * 0.60, `FONDO: ${bgDim ? 'TENUE' : 'VIVO'}`, {
+        const bgRow = this.add.container(width / 2, height * 0.60);
+        this.bgLabel = this.add.text(-100, 0, "BG IN GAME", {
             fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        }).setOrigin(0, 0.5);
 
-        this.bgBtn.on('pointerdown', () => {
-            // this.sound.play('sfx_reveal', { volume: 0.5, detune: 200 });
+        // Contenedor del Switch
+        const bgSwitchX = 50; 
+        const bgSwitchBg = this.add.graphics();
+        const bgOffText = this.add.text(bgSwitchX + 15, 0, "OFF", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff' }).setOrigin(0.5);
+        const bgOnText = this.add.text(bgSwitchX + 65, 0, "ON", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff' }).setOrigin(0.5);
+        const bgHandle = this.add.circle(bgDim ? bgSwitchX + 65 : bgSwitchX + 15, 0, 14, 0xffffff);
+
+        const drawBgSwitch = (enabled) => {
+            bgSwitchBg.clear();
+            if (enabled) {
+                bgSwitchBg.fillStyle(0xffffff, 1);
+                bgSwitchBg.fillRoundedRect(bgSwitchX, -15, 80, 30, 15);
+                bgOffText.setFill('#000000');
+                bgOnText.setFill('#000000');
+                bgHandle.setFillStyle(0x000000);
+            } else {
+                bgSwitchBg.lineStyle(2, 0xffffff);
+                bgSwitchBg.strokeRoundedRect(bgSwitchX, -15, 80, 30, 15);
+                bgSwitchBg.fillStyle(0x000000, 1);
+                bgSwitchBg.fillRoundedRect(bgSwitchX, -15, 80, 30, 15);
+                bgOffText.setFill('#ffffff');
+                bgOnText.setFill('#ffffff');
+                bgHandle.setFillStyle(0xffffff);
+            }
+        };
+
+        drawBgSwitch(bgDim);
+
+        const bgToggleArea = this.add.rectangle(bgSwitchX + 40, 0, 80, 30, 0x000000, 0)
+            .setInteractive({ useHandCursor: true });
+
+        const updateBgSwitch = (enabled) => {
+            this.tweens.add({
+                targets: bgHandle,
+                x: enabled ? bgSwitchX + 65 : bgSwitchX + 15,
+                duration: 200,
+                ease: 'Power2',
+                onStart: () => drawBgSwitch(enabled)
+            });
+        };
+
+        bgToggleArea.on('pointerdown', () => {
             bgDim = !bgDim;
             Storage.set('bgDim', bgDim);
-            this.bgBtn.setText(`FONDO: ${bgDim ? 'TENUE' : 'VIVO'}`);
+            updateBgSwitch(bgDim);
+            if (this.vibrateEnabled && navigator.vibrate) navigator.vibrate(20);
         });
 
-        // 6. DIFICULTAD
+        bgRow.add([this.bgLabel, bgSwitchBg, bgOffText, bgOnText, bgHandle, bgToggleArea]);
+
+        // 6. DIFICULTAD (SELECTOR CON FLECHAS)
         this.difficulties = ['EASY', 'MEDIUM', 'HARD'];
         let savedDiff = await Storage.get('difficulty', 'MEDIUM');
         this.diffIndex = this.difficulties.indexOf(savedDiff);
         if (this.diffIndex === -1) this.diffIndex = 1;
 
-        this.diffBtn = this.add.text(width / 2, height * 0.72, `DIFICULTAD: ${this.difficulties[this.diffIndex]}`, {
+        const diffRow = this.add.container(width / 2, height * 0.72);
+        
+        // Etiqueta (Más a la izquierda)
+        const diffLabel = this.add.text(-120, 0, "DIFFICULTY", {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
+        }).setOrigin(0, 0.5);
+
+        // Valor Central (Desplazado para no chocar)
+        const diffValue = this.add.text(100, 0, this.difficulties[this.diffIndex], {
             fontFamily: '"Press Start 2P"', fontSize: '14px', fill: this.getDiffColor(this.difficulties[this.diffIndex])
+        }).setOrigin(0.5);
+
+        // Flecha Izquierda
+        const leftArrow = this.add.text(40, 0, "<", {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', fill: '#ffffff'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        this.diffBtn.on('pointerdown', () => {
-            // this.sound.play('sfx_reveal', { volume: 0.5, detune: 200 });
-            this.diffIndex = (this.diffIndex + 1) % this.difficulties.length;
+        // Flecha Derecha
+        const rightArrow = this.add.text(160, 0, ">", {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', fill: '#ffffff'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        const updateDifficulty = (direction) => {
+            // Ciclo circular: +1 o -1
+            if (direction === 1) {
+                this.diffIndex = (this.diffIndex + 1) % this.difficulties.length;
+            } else {
+                this.diffIndex = (this.diffIndex - 1 + this.difficulties.length) % this.difficulties.length;
+            }
+
             const newDiff = this.difficulties[this.diffIndex];
             Storage.set('difficulty', newDiff);
-            this.diffBtn.setText(`DIFICULTAD: ${newDiff}`);
-            this.diffBtn.setFill(this.getDiffColor(newDiff));
+            
+            diffValue.setText(newDiff);
+            diffValue.setFill(this.getDiffColor(newDiff));
+            
+            // Animación de pulso
+            this.tweens.add({ targets: diffValue, scale: { from: 1.2, to: 1 }, duration: 200 });
             if (this.vibrateEnabled && navigator.vibrate) navigator.vibrate(20);
+        };
+
+        leftArrow.on('pointerdown', () => {
+            this.tweens.add({ targets: leftArrow, scale: 0.8, duration: 50, yoyo: true });
+            updateDifficulty(-1);
         });
 
+        rightArrow.on('pointerdown', () => {
+            this.tweens.add({ targets: rightArrow, scale: 0.8, duration: 50, yoyo: true });
+            updateDifficulty(1);
+        });
+        
+        // Añadir a la fila pero guardar referencias para poder actualizar colores si hiciera falta
+        this.diffValueText = diffValue; 
+        diffRow.add([diffLabel, leftArrow, diffValue, rightArrow]);
+
         // 7. Botón Volver
-        this.closeBtn = this.add.text(width / 2, height * 0.88, "VOLVER", {
+        this.closeBtn = this.add.text(width / 2, height * 0.88, "BACK", {
             fontFamily: '"Press Start 2P"', fontSize: '18px', fill: colors.accent
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
@@ -105,12 +249,30 @@ export class SettingsScene extends Phaser.Scene {
         });
 
         // 8. Privacidad
-        this.privacyBtn = this.add.text(width / 2, height * 0.82, "PRIVACIDAD", {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.text
+        this.privacyBtn = this.add.text(width / 2, height * 0.79, "PRIVACY", {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: colors.text
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         this.privacyBtn.on('pointerdown', () => {
             window.open('privacy.html', '_self');
+        });
+
+        // 9. Créditos
+        this.creditsBtn = this.add.text(width / 2, height * 0.83, "CREDITS", {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: colors.text
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        this.creditsBtn.on('pointerdown', () => {
+            if (this.creditsText) {
+                this.creditsText.destroy();
+                this.creditsText = null;
+                return;
+            }
+            this.creditsText = this.add.text(width / 2, height * 0.94, "DEVELOPED BY AXEL\nENGINE: PHASER 3\nVERSION 1.0", {
+                fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#888888', align: 'center'
+            }).setOrigin(0.5);
+            
+            this.tweens.add({ targets: this.creditsText, alpha: { from: 0, to: 1 }, duration: 500 });
         });
     }
 

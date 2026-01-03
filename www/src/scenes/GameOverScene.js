@@ -1,3 +1,5 @@
+import { CONFIG } from '../config.js';
+
 export class GameOverScene extends Phaser.Scene {
     constructor() {
         super('GameOverScene');
@@ -5,25 +7,22 @@ export class GameOverScene extends Phaser.Scene {
 
     create(data) {
         // data trae: { winner, streak, isNewRecord }
-        const winner = data.winner || 'NADIE';
+        const winner = data.winner || 'NO ONE';
         const streak = data.streak || 0;
         const isNewRecord = data.isNewRecord || false;
 
         const { width, height } = this.scale;
 
-        // Fondo (Transparente)
-        // this.cameras.main.setBackgroundColor('#000000');
+        const winnerColor = winner === 'CPU' ? '#' + CONFIG.COLORS.CPU_RED.toString(16) : '#' + CONFIG.COLORS.P1_BLUE.toString(16);
 
-        const color = winner === 'CPU' ? '#F34235' : '#00A8F3';
-
-        this.add.text(width / 2, height * 0.25, "EL GANADOR ES:", {
-            fontFamily: '"Press Start 2P"', fontSize: '18px', fill: '#ffffff', align: 'center'
+        this.add.text(width / 2, height * 0.25, "WINNER:", {
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: '18px', fill: CONFIG.COLORS.TEXT_MAIN, align: 'center'
         }).setOrigin(0.5);
 
         // Nombre del Ganador
-        let fontSize = winner.length > 10 ? '24px' : '40px';
+        let fontSize = winner.length > 10 ? CONFIG.FONTS.SIZES.LARGE : CONFIG.FONTS.SIZES.TITLE;
         const winText = this.add.text(width / 2, height * 0.35, winner, {
-            fontFamily: '"Press Start 2P"', fontSize: fontSize, fill: color, align: 'center', wordWrap: { width: width * 0.9 }
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: fontSize, fill: winnerColor, align: 'center', wordWrap: { width: width * 0.9 }
         }).setOrigin(0.5);
 
         this.tweens.add({ targets: winText, scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
@@ -34,95 +33,82 @@ export class GameOverScene extends Phaser.Scene {
             
             if (isNewRecord) {
                 // Si es récord, mostrar texto dorado parpadeante
-                const recText = this.add.text(width / 2, streakY, "¡NUEVO RECORD!", {
-                    fontFamily: '"Press Start 2P"', fontSize: '22px', fill: '#FFD700'
+                const recText = this.add.text(width / 2, streakY, "NEW RECORD!", {
+                    fontFamily: CONFIG.FONTS.MAIN, fontSize: '22px', fill: '#' + CONFIG.COLORS.GOLD.toString(16)
                 }).setOrigin(0.5);
                 
                 this.tweens.add({ targets: recText, alpha: 0, duration: 300, yoyo: true, repeat: -1 });
                 
                 // Texto de cantidad abajo
-                this.add.text(width / 2, streakY + 40, `${streak} VICTORIAS SEGUIDAS`, {
-                    fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#ffffff'
+                this.add.text(width / 2, streakY + 40, `${streak} WINS IN A ROW`, {
+                    fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.NORMAL, fill: CONFIG.COLORS.TEXT_MAIN
                 }).setOrigin(0.5);
 
             } else {
                 // Racha normal
-                this.add.text(width / 2, streakY, `RACHA ACTUAL: ${streak}`, {
-                    fontFamily: '"Press Start 2P"', fontSize: '16px', fill: '#aaaaaa'
+                this.add.text(width / 2, streakY, `CURRENT STREAK: ${streak}`, {
+                    fontFamily: CONFIG.FONTS.MAIN, fontSize: '16px', fill: CONFIG.COLORS.TEXT_MUTED
                 }).setOrigin(0.5);
             }
         }
 
-        // Botón Reiniciar
-        const restartBtn = this.add.container(width / 2, height * 0.7);
-        const rBg = this.add.rectangle(0, 0, 300, 70, 0xffffff).setInteractive({ useHandCursor: true });
-        const rTxt = this.add.text(0, 0, "REINICIAR", {
-            fontFamily: '"Press Start 2P"', fontSize: '18px', fill: '#000000'
-        }).setOrigin(0.5);
-        restartBtn.add([rBg, rTxt]);
+        // Botones Estilizados
+        this.createButton(width / 2, height * 0.7, "RESTART", CONFIG.COLORS.SUCCESS, () => {
+            this.scene.start('GameScene');
+        });
 
-                rBg.on('pointerdown', () => {
+        this.createButton(width / 2, height * 0.82, "MAIN MENU", 0x888888, () => {
+            this.scene.start('MainMenuScene');
+        });
 
-                    if (navigator.vibrate) navigator.vibrate(50);
+        // Efecto de entrada suave
+        this.cameras.main.alpha = 0;
+        this.tweens.add({ targets: this.cameras.main, alpha: 1, duration: CONFIG.TIMING.FADE_DURATION });
+    }
 
-                    this.tweens.add({
-
-                        targets: this.cameras.main,
-
-                        alpha: 0,
-
-                        duration: 300,
-
-                        onComplete: () => {
-
-                            this.scene.start('GameScene');
-
-                        }
-
-                    });
-
-                });
-
-                
-
-                // Botón Menú
-
-                const menuBtn = this.add.text(width / 2, height * 0.85, "IR AL MENU", {
-
-                     fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#888888'
-
-                }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-                
-
-                menuBtn.on('pointerdown', () => {
-
-                    this.tweens.add({
-
-                        targets: this.cameras.main,
-
-                        alpha: 0,
-
-                        duration: 300,
-
-                        onComplete: () => {
-
-                            this.scene.start('MainMenuScene');
-
-                        }
-
-                    });
-
-                });
-
+    createButton(x, y, label, color, callback) {
+        const container = this.add.container(x, y);
         
+        // Sombra (Efecto 3D simple)
+        const shadow = this.add.graphics();
+        shadow.fillStyle(0x000000, 0.5);
+        shadow.fillRoundedRect(-145, -30, 300, 60, CONFIG.UI.BUTTON_RADIUS); 
+        
+        // Fondo del botón
+        const bg = this.add.graphics();
+        bg.fillStyle(color, 1);
+        bg.fillRoundedRect(-150, -35, 300, 60, CONFIG.UI.BUTTON_RADIUS);
+        bg.lineStyle(CONFIG.UI.BORDER_WIDTH, 0xffffff, 1);
+        bg.strokeRoundedRect(-150, -35, 300, 60, CONFIG.UI.BUTTON_RADIUS);
 
-                // Efecto de entrada suave
+        const text = this.add.text(0, -5, label, {
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: '18px', fill: CONFIG.COLORS.TEXT_MAIN
+        }).setOrigin(0.5);
 
-                this.cameras.main.alpha = 0;
+        // Área interactiva transparente encima de todo
+        const hitArea = this.add.rectangle(0, -5, 300, 60, 0x000000, 0)
+            .setInteractive({ useHandCursor: true });
 
-                this.tweens.add({ targets: this.cameras.main, alpha: 1, duration: 500 });
+        container.add([shadow, bg, text, hitArea]);
 
-            }
+        hitArea.on('pointerdown', () => {
+            if (navigator.vibrate) navigator.vibrate(20);
+            this.tweens.add({
+                targets: container,
+                scale: 0.95,
+                duration: CONFIG.TIMING.BUTTON_BOUNCE,
+                yoyo: true,
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: this.cameras.main,
+                        alpha: 0,
+                        duration: 300,
+                        onComplete: callback
+                    });
+                }
+            });
+        });
 
-        }
+        return container;
+    }
+}
