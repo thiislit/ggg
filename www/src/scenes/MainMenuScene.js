@@ -1,5 +1,6 @@
 import { Storage } from '../Storage.js';
 import { CONFIG } from '../config.js';
+import { AudioManager } from '../managers/AudioManager.js';
 
 export class MainMenuScene extends Phaser.Scene {
     constructor() {
@@ -11,6 +12,9 @@ export class MainMenuScene extends Phaser.Scene {
         if (this.scene.get('BackgroundScene')) {
             this.scene.sendToBack('BackgroundScene');
         }
+        
+        // --- MUSICA DE FONDO GLOBAL ---
+        AudioManager.playMusic(this, 'bgm');
 
         const { width, height } = this.scale;
         
@@ -113,6 +117,7 @@ export class MainMenuScene extends Phaser.Scene {
 
         bg.on('pointerdown', () => {
             this.tweens.add({ targets: container, scale: 0.95, duration: CONFIG.TIMING.BUTTON_BOUNCE, yoyo: true });
+            AudioManager.playSFX(this, 'sfx_button');
             if (navigator.vibrate) navigator.vibrate(50);
             this.time.delayedCall(150, callback);
         });

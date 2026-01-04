@@ -1,3 +1,5 @@
+import { AudioManager } from './AudioManager.js';
+
 export class FatalityManager {
     constructor(scene) {
         this.scene = scene;
@@ -12,6 +14,7 @@ export class FatalityManager {
 
     playRockFatality(target, attacker, isPlayerWin, onComplete) {
         // --- SMASH DE ROCA ---
+        AudioManager.playSFX(this.scene, 'fatality_rock');
         this.scene.cameras.main.shake(4000, 0.05); 
         this.scene.cameras.main.flash(500, 255, 255, 255);
 
@@ -32,6 +35,7 @@ export class FatalityManager {
 
     playPaperFatality(target, attacker, isPlayerWin, onComplete) {
         // --- WRAP DE PAPEL ---
+        AudioManager.playSFX(this.scene, 'fatality_paper');
         target.setTint(0x888888);
         
         this.scene.tweens.add({
@@ -57,6 +61,7 @@ export class FatalityManager {
 
     playScissorFatality(target, attacker, isPlayerWin, onComplete) {
         // --- CORTE LETAL ---
+        AudioManager.playSFX(this.scene, 'fatality_scissor');
         const slash = this.scene.add.graphics();
         slash.lineStyle(10, 0xffffff);
         slash.beginPath();

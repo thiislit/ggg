@@ -2,6 +2,7 @@ import { CONFIG } from '../config.js';
 import { Storage } from '../Storage.js';
 import { FatalityManager } from '../managers/FatalityManager.js';
 import { OpponentAI } from '../managers/OpponentAI.js';
+import { AudioManager } from '../managers/AudioManager.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -41,7 +42,7 @@ export class GameScene extends Phaser.Scene {
             if (el) el.setFill(colors.text);
         });
         if (this.configBtn) this.configBtn.setFill(colors.text);
-        if (this.muteBtn) this.muteBtn.setFill(colors.text);
+        // Eliminado: if (this.muteBtn) this.muteBtn.setFill(colors.text);
         if (this.p1ButtonsBg) {
             this.p1ButtonsBg.forEach(bg => {
                 if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, 0xffffff);
@@ -134,7 +135,6 @@ export class GameScene extends Phaser.Scene {
         this.p1X = this.add.text(p1X, height * 0.45, '❌', emojiStyle).setOrigin(0.5).setAlpha(0).setDepth(10);
         this.p2X = this.add.text(p2X, height * 0.45, '❌', emojiStyle).setOrigin(0.5).setAlpha(0).setDepth(10);
 
-        this.sound.volume = 0.5;
         this.game.events.on('blur', () => this.pauseGame());
         this.game.events.on('focus', () => this.resumeGame());
 
@@ -342,7 +342,7 @@ export class GameScene extends Phaser.Scene {
             bg.on('pointerdown', () => {
                 if (!this.isPlayingRound || this.isResolving) return;
                 this.tweens.add({ targets: container, scale: 0.9, duration: CONFIG.TIMING.BUTTON_BOUNCE, yoyo: true });
-                this.sound.play(audioKeys[index]);
+                AudioManager.playSFX(this, audioKeys[index]);
                 if (navigator.vibrate) navigator.vibrate(20);
                 this.handleInput(index);
             });
@@ -355,33 +355,49 @@ export class GameScene extends Phaser.Scene {
         const SAFE_BOTTOM = Math.max(safeBottom, 20);
         const BTN_Y = height - 60 - (SAFE_BOTTOM > 20 ? SAFE_BOTTOM / 2 : 0);
         this.configBtn = this.add.text(60, BTN_Y, '⚙️', { fontSize: '30px', padding: { x: 5, y: 5 } }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(2000);
-        this.configBtn.on('pointerdown', () => {
-            this.tweens.add({ targets: this.configBtn, scale: 1.2, duration: 100, yoyo: true });
-            this.scene.launch('SettingsScene');
-            this.scene.get('SettingsScene').events.once('settings-closed', () => this.applyTheme());
-        });
-        // MUTE BUTTON
-        // Sincronizar estado inicial con el motor de audio
-        const currentMuteState = this.sound.mute;
-        const icon = currentMuteState ? '🔊' : '🔇';
-        
-        this.muteBtn = this.add.text(width - 60, BTN_Y, icon, { fontSize: '30px', padding: { x: 5, y: 5 } })
-            .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true })
-            .setDepth(2000);
-            
-        this.muteBtn.on('pointerdown', () => {
-            // Invertir el estado global de mute
-            this.sound.mute = !this.sound.mute;
-            
-            // Actualizar icono según el nuevo estado
-            this.muteBtn.setText(this.sound.mute ? '🔊' : '🔇');
-            
-            this.tweens.add({ targets: this.muteBtn, scale: 1.2, duration: 100, yoyo: true });
-        });
-        this.switchBtn = this.add.text(width / 2, height - 130 - (SAFE_BOTTOM > 20 ? SAFE_BOTTOM / 2 : 0), '⇄', { fontSize: '40px' }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(2000);
-        this.switchBtn.on('pointerdown', () => {
-            if (this.isPlayingRound || this.isSwitchingSide) return;
+                                                this.configBtn.on('pointerdown', () => {
+                                                    AudioManager.playSFX(this, 'sfx_button');
+                                                    this.tweens.add({ targets: this.configBtn, scale: 1.2, duration: 100, yoyo: true });
+                                                    this.scene.launch('SettingsScene');
+                                                    this.scene.get('SettingsScene').events.once('settings-closed', () => this.applyTheme());
+                                                });
+                                        
+                                                        // --- BOTÓN MUTE (VARIABLE ESPEJO) ---
+                                                        // Sincronizar variable local con el estado real inicial
+                                                        this.localMuteState = this.sound.mute;
+                                                
+                                                        const setupMuteBtn = () => {
+                                                            if (this.muteBtn) this.muteBtn.destroy();
+                                                            
+                                                            // Usamos la variable LOCAL para decidir el icono (UI Instantánea)
+                                                            const icon = this.localMuteState ? '🔇' : '🔊';
+                                                            
+                                                            this.muteBtn = this.add.text(width - 60, BTN_Y, icon, { 
+                                                                fontFamily: 'Arial', 
+                                                                fontSize: '30px', 
+                                                                padding: { x: 10, y: 10 } 
+                                                            })
+                                                            .setOrigin(0.5)
+                                                            .setInteractive({ useHandCursor: true })
+                                                            .setDepth(2000);
+                                                
+                                                            this.muteBtn.on('pointerdown', () => {
+                                                                // 1. Cambiar estado LOCAL primero (UI)
+                                                                this.localMuteState = !this.localMuteState;
+                                                                
+                                                                // 2. Forzar al motor de audio a obedecer
+                                                                this.sound.mute = this.localMuteState;
+                                                                
+                                                                // 3. Recrear botón visualmente
+                                                                setupMuteBtn(); 
+                                                                
+                                                                this.tweens.add({ targets: this.muteBtn, scale: 1.2, duration: 100, yoyo: true });
+                                                            });
+                                                        };
+                                                        setupMuteBtn();                                        
+                                                this.switchBtn = this.add.text(width / 2, height - 130 - (SAFE_BOTTOM > 20 ? SAFE_BOTTOM / 2 : 0), '⇄', { fontSize: '40px' }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(2000);
+                                                this.switchBtn.on('pointerdown', () => {            if (this.isPlayingRound || this.isSwitchingSide) return;
+            AudioManager.playSFX(this, 'sfx_button');
             this.switchSides();
             this.tweens.add({ targets: this.switchBtn, scale: 1.2, duration: 100, yoyo: true });
         });
@@ -393,6 +409,7 @@ export class GameScene extends Phaser.Scene {
         this.stopBtn.add([sShadow, sBg, sText, sHit]);
         sHit.on('pointerdown', () => {
              if (navigator.vibrate) navigator.vibrate(20);
+             AudioManager.playSFX(this, 'sfx_button');
              this.tweens.add({ targets: this.stopBtn, scale: 0.95, duration: CONFIG.TIMING.BUTTON_BOUNCE, yoyo: true });
              this.tweens.add({ targets: this.cameras.main, alpha: 0, duration: 300, onComplete: () => this.scene.start('MainMenuScene') });
         });
@@ -402,7 +419,7 @@ export class GameScene extends Phaser.Scene {
         if (this.isResolving) return;
         this.isResolving = true; this.playerStats[index]++; this.resetButtonColors();
         if (this.p1ButtonsBg[index]) { this.p1ButtonsBg[index].setFillStyle(0xFFFFFF); this.p1ButtonsTxt[index].setFill(CONFIG.COLORS.TEXT_DARK); }
-        this.sound.play(['sfx_rock', 'sfx_paper', 'sfx_scissors'][index]);
+        AudioManager.playSFX(this, ['sfx_rock', 'sfx_paper', 'sfx_scissors'][index]);
         this.time.delayedCall(800, () => this.resolveRound(index));
     }
 
@@ -419,7 +436,7 @@ export class GameScene extends Phaser.Scene {
         this.p2Emoji.setAngle(this.isPlayerRight ? 90 : -90).setFlipX(this.isPlayerRight);
         this.p1Emoji.x = p1TargetX < CENTER_X ? -200 : width + 200;
         this.p2Emoji.x = p2TargetX < CENTER_X ? -200 : width + 200;
-        this.tweens.add({ targets: [this.p1Emoji, this.p2Emoji], x: (target) => (target === this.p1Emoji ? p1TargetX : p2TargetX), duration: 500, ease: 'Back.easeOut', onStart: () => this.sound.play('sfx_reveal', { volume: 0.3 }) });
+        this.tweens.add({ targets: [this.p1Emoji, this.p2Emoji], x: (target) => (target === this.p1Emoji ? p1TargetX : p2TargetX), duration: 500, ease: 'Back.easeOut', onStart: () => AudioManager.playSFX(this, 'sfx_reveal', { volume: 0.3 * AudioManager.volumes.sfx }) });
         [this.timeBar1, this.timeBar2].forEach(bar => { bar.setVisible(true).setFillStyle(CONFIG.COLORS.SUCCESS).width = (width * 0.4); });
         this.timeBar1.alpha = 0; this.timeBar2.alpha = 0; this.timeText1.alpha = 0; this.timeText2.alpha = 0;
         this.tweens.add({ targets: [this.timeBar1, this.timeBar2, this.timeText1, this.timeText2], alpha: 1, duration: 300 });
@@ -452,16 +469,17 @@ export class GameScene extends Phaser.Scene {
     getCpuChoice() { return OpponentAI.getChoice(this.difficulty, this.playerStats); }
 
     showResults(p1, p2) {
-        this.sound.stopAll();
+        // NO detener todo el audio, para que la música siga sonando
+        // this.sound.stopAll(); 
         const icons = ['✊', '✋', '✌️'];
         if (this.p1Emoji) this.p1Emoji.setText(p1 === -1 ? '❌' : icons[p1]);
         if (this.p2Emoji) this.p2Emoji.setText(icons[p2]);
         this.tweens.add({ targets: [this.p1Emoji, this.p2Emoji], scale: 1.5, duration: 100, yoyo: true, ease: 'Back.easeOut' });
         let resultText = ""; let color = CONFIG.COLORS.TEXT_MAIN;
-        if (p1 === -1) { resultText = "TIME'S UP!"; color = "#ff0000"; this.p1Health--; this.sound.play('sfx_lose'); this.playImpactEffect(CONFIG.COLORS.CPU_RED, 0.8); }
-        else if (p1 === p2) { resultText = "DRAW!"; this.sound.play('sfx_tie'); this.playImpactEffect(0xaaaaaa, 0.5); this.p2Status.setText("DRAW!").setFill(color).setScale(0); this.tweens.add({ targets: this.p2Status, scale: 1.2, duration: 400, ease: 'Bounce.easeOut' }); }
-        else if ((p1 === 0 && p2 === 2) || (p1 === 1 && p2 === 0) || (p1 === 2 && p2 === 1)) { resultText = "YOU WIN!"; color = "#" + CONFIG.COLORS.P1_BLUE.toString(16); this.p2Health--; this.sound.play('sfx_win'); this.tweens.add({ targets: this.p2X, alpha: 1, scale: { from: 2, to: 1 }, duration: 300, ease: 'Bounce.easeOut' }); this.playImpactEffect(CONFIG.COLORS.P1_BLUE, 1.0); }
-        else { resultText = "YOU LOSE!"; color = "#" + CONFIG.COLORS.CPU_RED.toString(16); this.p1Health--; this.sound.play('sfx_lose'); this.tweens.add({ targets: this.p1X, alpha: 1, scale: { from: 2, to: 1 }, duration: 300, ease: 'Bounce.easeOut' }); this.playImpactEffect(CONFIG.COLORS.CPU_RED, 0.8); }
+        if (p1 === -1) { resultText = "TIME'S UP!"; color = "#ff0000"; this.p1Health--; AudioManager.playSFX(this, 'sfx_lose'); this.playImpactEffect(CONFIG.COLORS.CPU_RED, 0.8); }
+        else if (p1 === p2) { resultText = "DRAW!"; AudioManager.playSFX(this, 'sfx_tie'); this.playImpactEffect(0xaaaaaa, 0.5); this.p2Status.setText("DRAW!").setFill(color).setScale(0); this.tweens.add({ targets: this.p2Status, scale: 1.2, duration: 400, ease: 'Bounce.easeOut' }); }
+        else if ((p1 === 0 && p2 === 2) || (p1 === 1 && p2 === 0) || (p1 === 2 && p2 === 1)) { resultText = "YOU WIN!"; color = "#" + CONFIG.COLORS.P1_BLUE.toString(16); this.p2Health--; AudioManager.playSFX(this, 'sfx_win'); this.tweens.add({ targets: this.p2X, alpha: 1, scale: { from: 2, to: 1 }, duration: 300, ease: 'Bounce.easeOut' }); this.playImpactEffect(CONFIG.COLORS.P1_BLUE, 1.0); }
+        else { resultText = "YOU LOSE!"; color = "#" + CONFIG.COLORS.CPU_RED.toString(16); this.p1Health--; AudioManager.playSFX(this, 'sfx_lose'); this.tweens.add({ targets: this.p1X, alpha: 1, scale: { from: 2, to: 1 }, duration: 300, ease: 'Bounce.easeOut' }); this.playImpactEffect(CONFIG.COLORS.CPU_RED, 0.8); }
         this.p1Status.setText(resultText).setFill(color).setScale(0);
         this.tweens.add({ targets: this.p1Status, scale: 1.2, duration: 400, ease: 'Bounce.easeOut' });
         this.updateHearts(this.p1Score, this.p1Health); this.updateHearts(this.p2Score, this.p2Health);
@@ -517,6 +535,7 @@ export class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: this.nextRondaBtn, scale: 1, duration: 400, ease: 'Back.easeOut' });
         
         this.nextRondaBtn.on('pointerdown', () => { 
+            AudioManager.playSFX(this, 'sfx_button');
             this.nextRondaBtn.setScale(0.9); 
             if (navigator.vibrate) navigator.vibrate(20); 
         });

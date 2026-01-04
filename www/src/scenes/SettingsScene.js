@@ -1,4 +1,5 @@
 import { Storage } from '../Storage.js';
+import { AudioManager } from '../managers/AudioManager.js';
 
 export class SettingsScene extends Phaser.Scene {
     constructor() {
@@ -25,29 +26,49 @@ export class SettingsScene extends Phaser.Scene {
             fontFamily: '"Press Start 2P"', fontSize: '28px', fill: colors.text
         }).setOrigin(0.5);
 
-        // 3. Volumen
-        this.volLabel = this.add.text(width / 2, height * 0.25, "VOLUME", {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
+        // 3. Volumen de MÚSICA
+        this.musicLabel = this.add.text(width / 2, height * 0.22, "MUSIC VOLUME", {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.text
         }).setOrigin(0.5);
 
-        const track = this.add.rectangle(width / 2, height * 0.33, 200, 10, 0x555555).setOrigin(0.5);
-        const handleX = (width / 2 - 100) + (this.sound.volume * 200);
-        this.handle = this.add.circle(handleX, height * 0.33, 15, this.currentTheme === 'dark' ? 0x00A8F3 : 0xF34235)
+        const musicTrack = this.add.rectangle(width / 2, height * 0.28, 200, 10, 0x555555).setOrigin(0.5);
+        const musicHandleX = (width / 2 - 100) + (AudioManager.volumes.music * 200);
+        this.musicHandle = this.add.circle(musicHandleX, height * 0.28, 15, 0x00A8F3)
             .setInteractive({ draggable: true, useHandCursor: true });
 
-        this.handle.on('drag', (pointer, dragX) => {
+        this.musicHandle.on('drag', (pointer, dragX) => {
             const minX = width / 2 - 100;
             const maxX = width / 2 + 100;
             const clampedX = Phaser.Math.Clamp(dragX, minX, maxX);
-            this.handle.x = clampedX;
-            this.sound.setVolume((clampedX - minX) / 200);
+            this.musicHandle.x = clampedX;
+            const vol = (clampedX - minX) / 200;
+            AudioManager.setMusicVolume(vol);
+        });
+
+        // 3b. Volumen de SFX
+        this.sfxLabel = this.add.text(width / 2, height * 0.35, "SFX VOLUME", {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.text
+        }).setOrigin(0.5);
+
+        const sfxTrack = this.add.rectangle(width / 2, height * 0.41, 200, 10, 0x555555).setOrigin(0.5);
+        const sfxHandleX = (width / 2 - 100) + (AudioManager.volumes.sfx * 200);
+        this.sfxHandle = this.add.circle(sfxHandleX, height * 0.41, 15, 0x00A8F3)
+            .setInteractive({ draggable: true, useHandCursor: true });
+
+        this.sfxHandle.on('drag', (pointer, dragX) => {
+            const minX = width / 2 - 100;
+            const maxX = width / 2 + 100;
+            const clampedX = Phaser.Math.Clamp(dragX, minX, maxX);
+            this.sfxHandle.x = clampedX;
+            const vol = (clampedX - minX) / 200;
+            AudioManager.setSfxVolume(vol);
         });
 
         // 4. Vibración (SWITCH VISUAL B&N)
         const savedVib = await Storage.get('vibrate', 'true');
         this.vibrateEnabled = (savedVib !== 'false');
 
-        const vibRow = this.add.container(width / 2, height * 0.48);
+        const vibRow = this.add.container(width / 2, height * 0.52);
         this.vibLabel = this.add.text(-100, 0, "VIBRATION", {
             fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
         }).setOrigin(0, 0.5);
@@ -110,6 +131,7 @@ export class SettingsScene extends Phaser.Scene {
         };
 
         toggleArea.on('pointerdown', () => {
+            AudioManager.playSFX(this, 'sfx_button');
             this.vibrateEnabled = !this.vibrateEnabled;
             Storage.set('vibrate', this.vibrateEnabled);
             updateSwitch(this.vibrateEnabled);
@@ -121,7 +143,7 @@ export class SettingsScene extends Phaser.Scene {
         // 5. Fondo (SWITCH VISUAL B&N)
         let bgDim = await Storage.get('bgDim', 'false') === 'true';
         
-        const bgRow = this.add.container(width / 2, height * 0.60);
+        const bgRow = this.add.container(width / 2, height * 0.62);
         this.bgLabel = this.add.text(-100, 0, "BG IN GAME", {
             fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
         }).setOrigin(0, 0.5);
@@ -168,6 +190,7 @@ export class SettingsScene extends Phaser.Scene {
         };
 
         bgToggleArea.on('pointerdown', () => {
+            AudioManager.playSFX(this, 'sfx_button');
             bgDim = !bgDim;
             Storage.set('bgDim', bgDim);
             updateBgSwitch(bgDim);
@@ -182,7 +205,7 @@ export class SettingsScene extends Phaser.Scene {
         this.diffIndex = this.difficulties.indexOf(savedDiff);
         if (this.diffIndex === -1) this.diffIndex = 1;
 
-        const diffRow = this.add.container(width / 2, height * 0.72);
+        const diffRow = this.add.container(width / 2, height * 0.74);
         
         // Etiqueta (Más a la izquierda)
         const diffLabel = this.add.text(-120, 0, "DIFFICULTY", {
@@ -224,11 +247,13 @@ export class SettingsScene extends Phaser.Scene {
         };
 
         leftArrow.on('pointerdown', () => {
+            AudioManager.playSFX(this, 'sfx_button');
             this.tweens.add({ targets: leftArrow, scale: 0.8, duration: 50, yoyo: true });
             updateDifficulty(-1);
         });
 
         rightArrow.on('pointerdown', () => {
+            AudioManager.playSFX(this, 'sfx_button');
             this.tweens.add({ targets: rightArrow, scale: 0.8, duration: 50, yoyo: true });
             updateDifficulty(1);
         });
@@ -238,37 +263,40 @@ export class SettingsScene extends Phaser.Scene {
         diffRow.add([diffLabel, leftArrow, diffValue, rightArrow]);
 
         // 7. Botón Volver
-        this.closeBtn = this.add.text(width / 2, height * 0.88, "BACK", {
+        this.closeBtn = this.add.text(width / 2, height * 0.90, "BACK", {
             fontFamily: '"Press Start 2P"', fontSize: '18px', fill: colors.accent
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         this.closeBtn.on('pointerdown', () => {
+            AudioManager.playSFX(this, 'sfx_button');
             // this.sound.play('sfx_reveal', { volume: 0.5, detune: 500 });
             this.events.emit('settings-closed');
             this.scene.stop();
         });
 
         // 8. Privacidad
-        this.privacyBtn = this.add.text(width / 2, height * 0.79, "PRIVACY", {
+        this.privacyBtn = this.add.text(width / 2, height * 0.82, "PRIVACY", {
             fontFamily: '"Press Start 2P"', fontSize: '10px', fill: colors.text
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         this.privacyBtn.on('pointerdown', () => {
+            AudioManager.playSFX(this, 'sfx_button');
             window.open('privacy.html', '_self');
         });
 
         // 9. Créditos
-        this.creditsBtn = this.add.text(width / 2, height * 0.83, "CREDITS", {
+        this.creditsBtn = this.add.text(width / 2, height * 0.86, "CREDITS", {
             fontFamily: '"Press Start 2P"', fontSize: '10px', fill: colors.text
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         this.creditsBtn.on('pointerdown', () => {
+            AudioManager.playSFX(this, 'sfx_button');
             if (this.creditsText) {
                 this.creditsText.destroy();
                 this.creditsText = null;
                 return;
             }
-            this.creditsText = this.add.text(width / 2, height * 0.94, "DEVELOPED BY AXEL\nENGINE: PHASER 3\nVERSION 1.0", {
+            this.creditsText = this.add.text(width / 2, height * 0.96, "DEVELOPED BY AXEL\nENGINE: PHASER 3\nVERSION 1.0", {
                 fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#888888', align: 'center'
             }).setOrigin(0.5);
             

@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { Storage } from '../Storage.js';
+import { AudioManager } from '../managers/AudioManager.js';
 
 export class SplashScene extends Phaser.Scene {
     constructor() {
@@ -51,9 +52,20 @@ export class SplashScene extends Phaser.Scene {
         this.load.audio('sfx_win', 'assets/sounds/yooo-win.mp3');
         this.load.audio('sfx_lose', 'assets/sounds/whywhy-lose.mp3');
         this.load.audio('sfx_tie', 'assets/sounds/tietie-tie.mp3');
+        // Music
+        this.load.audio('bgm', 'assets/sounds/background.mp3');
+        // UI
+        this.load.audio('sfx_button', 'assets/sounds/button-click.mp3');
+        // Fatalities
+        this.load.audio('fatality_rock', 'assets/sounds/rock-fatality.mp3');
+        this.load.audio('fatality_paper', 'assets/sounds/paper-fatality.mp3');
+        this.load.audio('fatality_scissor', 'assets/sounds/scissor-fatality.mp3');
     }
 
-    create() {
+    async create() {
+        // Inicializar gestor de audio
+        await AudioManager.init(this);
+
         // Iniciar el fondo animado en paralelo
         this.scene.launch('BackgroundScene');
         // Aseguramos que el fondo se quede DETRÁS de esta escena (y de todas las futuras)
@@ -333,6 +345,7 @@ export class SplashScene extends Phaser.Scene {
 
             input.addEventListener('keydown', (e) => { if(e.key === 'Enter') finalize(); });
             okBg.on('pointerdown', () => {
+                AudioManager.playSFX(this, 'sfx_button');
                 this.tweens.add({ targets: okBtn, scale: 0.9, duration: 50, yoyo: true });
                 finalize();
             });
@@ -345,6 +358,7 @@ export class SplashScene extends Phaser.Scene {
                 document.body.removeChild(this.hiddenInput);
                 this.hiddenInput = null;
             }
+            AudioManager.playSFX(this, 'sfx_button');
             if (navigator.vibrate) navigator.vibrate(50);
             
             // Efecto de presión

@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { AudioManager } from '../managers/AudioManager.js';
 
 export class GameOverScene extends Phaser.Scene {
     constructor() {
@@ -92,6 +93,7 @@ export class GameOverScene extends Phaser.Scene {
         container.add([shadow, bg, text, hitArea]);
 
         hitArea.on('pointerdown', () => {
+            AudioManager.playSFX(this, 'sfx_button');
             if (navigator.vibrate) navigator.vibrate(20);
             this.tweens.add({
                 targets: container,
@@ -111,4 +113,4 @@ export class GameOverScene extends Phaser.Scene {
 
         return container;
     }
-}
+}   ``
