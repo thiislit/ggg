@@ -14,7 +14,8 @@ export class GameOverScene extends Phaser.Scene {
 
         const { width, height } = this.scale;
 
-        const winnerColor = winner === 'CPU' ? '#' + CONFIG.COLORS.CPU_RED.toString(16) : '#' + CONFIG.COLORS.P1_BLUE.toString(16);
+        // En modo terminal, todo tiende al verde neon o blanco
+        const winnerColor = CONFIG.COLORS.TEXT_MAIN;
 
         this.add.text(width / 2, height * 0.25, "WINNER:", {
             fontFamily: CONFIG.FONTS.MAIN, fontSize: '18px', fill: CONFIG.COLORS.TEXT_MAIN, align: 'center'
@@ -26,19 +27,19 @@ export class GameOverScene extends Phaser.Scene {
             fontFamily: CONFIG.FONTS.MAIN, fontSize: fontSize, fill: winnerColor, align: 'center', wordWrap: { width: width * 0.9 }
         }).setOrigin(0.5);
 
-        this.tweens.add({ targets: winText, scale: 1.2, duration: 500, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: winText, scale: 1.1, duration: 500, yoyo: true, repeat: -1 });
 
         // --- MOSTRAR RACHA ---
         if (streak > 0 || isNewRecord) {
             const streakY = height * 0.5;
             
             if (isNewRecord) {
-                // Si es récord, mostrar texto dorado parpadeante
+                // Si es récord, mostrar texto blanco brillante
                 const recText = this.add.text(width / 2, streakY, "NEW RECORD!", {
-                    fontFamily: CONFIG.FONTS.MAIN, fontSize: '22px', fill: '#' + CONFIG.COLORS.GOLD.toString(16)
+                    fontFamily: CONFIG.FONTS.MAIN, fontSize: '22px', fill: CONFIG.COLORS.GOLD
                 }).setOrigin(0.5);
                 
-                this.tweens.add({ targets: recText, alpha: 0, duration: 300, yoyo: true, repeat: -1 });
+                this.tweens.add({ targets: recText, alpha: 0.3, duration: 300, yoyo: true, repeat: -1 });
                 
                 // Texto de cantidad abajo
                 this.add.text(width / 2, streakY + 40, `${streak} WINS IN A ROW`, {
@@ -54,11 +55,11 @@ export class GameOverScene extends Phaser.Scene {
         }
 
         // Botones Estilizados
-        this.createButton(width / 2, height * 0.7, "RESTART", CONFIG.COLORS.SUCCESS, () => {
+        this.createButton(width / 2, height * 0.7, "RESTART", CONFIG.COLORS.P1_BLUE, () => {
             this.scene.start('GameScene');
         });
 
-        this.createButton(width / 2, height * 0.82, "MAIN MENU", 0x888888, () => {
+        this.createButton(width / 2, height * 0.82, "MAIN MENU", CONFIG.COLORS.TEXT_MUTED, () => {
             this.scene.start('MainMenuScene');
         });
 
@@ -70,9 +71,9 @@ export class GameOverScene extends Phaser.Scene {
     createButton(x, y, label, color, callback) {
         const container = this.add.container(x, y);
         
-        // Sombra (Efecto 3D simple)
+        // Sombra (Efecto terminal simple)
         const shadow = this.add.graphics();
-        shadow.fillStyle(0x000000, 0.5);
+        shadow.fillStyle(0x000000, 0.7);
         shadow.fillRoundedRect(-145, -30, 300, 60, CONFIG.UI.BUTTON_RADIUS); 
         
         // Fondo del botón
@@ -83,7 +84,7 @@ export class GameOverScene extends Phaser.Scene {
         bg.strokeRoundedRect(-150, -35, 300, 60, CONFIG.UI.BUTTON_RADIUS);
 
         const text = this.add.text(0, -5, label, {
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: '18px', fill: CONFIG.COLORS.TEXT_MAIN
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: '18px', fill: CONFIG.COLORS.TEXT_DARK
         }).setOrigin(0.5);
 
         // Área interactiva transparente encima de todo

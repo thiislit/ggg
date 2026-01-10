@@ -26,7 +26,7 @@ export class MainMenuScene extends Phaser.Scene {
         this.playerText = this.add.text(width / 2, height * 0.15, `HELLO, ${playerName}`, {
             fontFamily: CONFIG.FONTS.MAIN,
             fontSize: CONFIG.FONTS.SIZES.LARGE,
-            fill: '#aaaaaa', // Mantenemos gris suave específico o podríamos usar MUTED
+            fill: CONFIG.COLORS.TEXT_MAIN,
             align: 'center',
             wordWrap: { width: width * 0.9 } 
         }).setOrigin(0.5);
@@ -34,7 +34,6 @@ export class MainMenuScene extends Phaser.Scene {
         // --- BOTONES ---
         // 1. INICIAR JUEGO
         const startBtn = this.createButton(width / 2, height * 0.45, "START GAME", CONFIG.COLORS.P1_BLUE, () => {
-            // Transición suave
             this.tweens.add({
                 targets: this.cameras.main,
                 alpha: 0,
@@ -46,34 +45,33 @@ export class MainMenuScene extends Phaser.Scene {
         });
 
         // 2. OPCIONES
-        const optBtn = this.createButton(width / 2, height * 0.6, "OPTIONS", 0x555555, () => {
+        const optBtn = this.createButton(width / 2, height * 0.6, "OPTIONS", CONFIG.COLORS.TEXT_MUTED, () => {
             this.scene.launch('SettingsScene'); 
         });
 
         // Escuchar cuando se cierran las opciones
         this.scene.get('SettingsScene').events.on('settings-closed', async () => {
-            // Refrescar el nombre por si cambió en Settings
             const newName = await Storage.get('playerName', 'PLAYER 1');
-            this.playerText.setText(`HELLO, ${newName}`);
+            this.playerText.setText(`HELLO, ${newName}`).setFill(CONFIG.COLORS.TEXT_MAIN);
         });
 
         // --- MOSTRAR MEJOR RACHA ---
         this.recordText = this.add.text(0, 0, `RECORD: ${bestStreak} WINS`, {
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: '16px', fill: '#' + CONFIG.COLORS.GOLD.toString(16)
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: '16px', fill: CONFIG.COLORS.TEXT_MAIN
         }).setOrigin(0.5);
 
         const recordContainer = this.add.container(width / 2, height * 0.85);
         const recordBg = this.add.graphics();
-        recordBg.fillStyle(CONFIG.COLORS.BG_DARK, 1);
+        recordBg.fillStyle(0x000000, 0.7);
         recordBg.fillRoundedRect(-150, -25, 300, 50, CONFIG.UI.BUTTON_RADIUS);
-        recordBg.lineStyle(2, CONFIG.COLORS.GOLD);
+        recordBg.lineStyle(2, CONFIG.COLORS.P1_BLUE);
         recordBg.strokeRoundedRect(-150, -25, 300, 50, CONFIG.UI.BUTTON_RADIUS);
         
         recordContainer.add([recordBg, this.recordText]);
 
         // --- VERSIÓN ---
         this.add.text(width - 20, height - 20, "v1.0", {
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.SMALL, fill: '#555555'
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.SMALL, fill: CONFIG.COLORS.TEXT_MUTED
         }).setOrigin(1, 1);
 
         // Efecto de entrada suave
@@ -110,7 +108,7 @@ export class MainMenuScene extends Phaser.Scene {
         });
 
         const txt = this.add.text(0, 0, text, {
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.LARGE
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.LARGE, fill: CONFIG.COLORS.TEXT_DARK
         }).setOrigin(0.5);
 
         container.add([glowBg, bg, txt]);

@@ -17,24 +17,46 @@ export class GameScene extends Phaser.Scene {
                 background: CONFIG.COLORS.BG_DARK, 
                 text: CONFIG.COLORS.TEXT_MAIN, 
                 accent: CONFIG.COLORS.P1_BLUE, 
-                uiBg: 0x1a1a1a 
-            },
-            light: { 
-                background: 0xffffff, 
-                text: CONFIG.COLORS.TEXT_DARK, 
-                accent: CONFIG.COLORS.CPU_RED, 
-                uiBg: 0xf0f0f0 
+                uiBg: 0x111111 
             }
         };
         this.currentTheme = 'dark';
-        this.isPlayerRight = false;
-        this.difficulty = 'MEDIUM';
+
+        // --- SISTEMA DE DIÁLOGOS (Banco de Frases) ---
+        // Definimos las frases base. Luego crearemos copias para barajar.
+        this.baseDialogues = {
+            P1: {
+                WIN: ["Hahaha! EZ clap", "Lol, No cap 🧢", "Ratio + L! Hahaha", "Diff! Ez", "Built diff, lol", "Sit down! Hahaha", "Emotional dmg!", "Sheeesh! W", "Bet! Hahaha", "Lol, 2 Ez", "My lobby! Hahaha", "Clapped! Lmfao"],
+                LOSE: ["Oh no! Lag!!", "Wait... Hacks?", "Nooo! Cringe...", "Oh no, Unlucky", "Wait, Rigged", "Bruh moment... Noo", "Wait! Misinput", "Who asked? L", "Oh no, Ping diff", "Controller died! Nooo"],
+                DRAW: ["Huh? Same brain", "Wait, Hivemind?", "Pause... Lol", "Loading... Huh?", "Sus... Wait", "Twin? Hahaha", "Great minds, lol", "Wait, Lag?"]
+            },
+            CPU: {
+                WIN: ["Hahaha. Deleted.", "L Bozo. Lol", "Touch grass. Hahaha", "Git gud. Hahaha", "Skill issue. Lol", "Calculated. Hahaha", "Imagine losing. Lol", "Bot diff. Hahaha", "Cope harder. Lol", "Uninstall? Hahaha", "Ez Game. Lol"],
+                LOSE: ["Oh no! Error 404", "Wait... Glitch...", "Nooo! Lag switch?", "Reported. Nooo", "Rebooting... Wait", "Sus activity! Noo", "Ctrl+Alt+Del... Oh no", "System Fail. Nooo", "Blue Screen! Wait", "Devs fix this! Noo"],
+                DRAW: ["Huh? Mirroring...", "Wait, Sync error", "Buffering... Lol", "Copycat. Huh?", "Ping... Wait", "Computing... Lol"]
+            }
+        };
+        
+        // Aquí guardaremos las "barajas" actuales
+        this.dialogueDecks = { P1: {}, CPU: {} };
+    }
+
+    // Función auxiliar para obtener una frase sin repetir
+    getDialoguePhrase(speaker, type) {
+        // Inicializar mazo si no existe o está vacío
+        if (!this.dialogueDecks[speaker][type] || this.dialogueDecks[speaker][type].length === 0) {
+            // Clonar las frases base y barajar
+            this.dialogueDecks[speaker][type] = Phaser.Utils.Array.Shuffle([...this.baseDialogues[speaker][type]]);
+        }
+        // Sacar y devolver la última frase
+        return this.dialogueDecks[speaker][type].pop();
     }
 
     async applyTheme() {
         const colors = this.themes['dark']; 
         const bgDim = await Storage.get('bgDim', 'false') === 'true';
-        const bgColor = bgDim ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0)';
+        // En modo terminal, el fondo es más oscuro y verdoso si se aplica dim
+        const bgColor = bgDim ? 'rgba(0,10,0,0.8)' : 'rgba(0,0,0,0)';
         this.cameras.main.setBackgroundColor(bgColor);
         
         const textElements = [this.p1Status, this.p2Status, this.timeText1, this.timeText2];
@@ -42,10 +64,15 @@ export class GameScene extends Phaser.Scene {
             if (el) el.setFill(colors.text);
         });
         if (this.configBtn) this.configBtn.setFill(colors.text);
-        // Eliminado: if (this.muteBtn) this.muteBtn.setFill(colors.text);
+        
         if (this.p1ButtonsBg) {
             this.p1ButtonsBg.forEach(bg => {
-                if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, 0xffffff);
+                if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, CONFIG.COLORS.P1_BLUE);
+            });
+        }
+        if (this.p2ButtonsBg) {
+            this.p2ButtonsBg.forEach(bg => {
+                if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, CONFIG.COLORS.CPU_RED);
             });
         }
         if (this.gridGraphics) this.drawGrid();
@@ -53,6 +80,9 @@ export class GameScene extends Phaser.Scene {
 
     async create() {
         this.playerName = await Storage.get('playerName', 'PLAYER 1');
+        this.playerSpecies = await Storage.get('playerSpecies', 'HUMAN');
+        this.playerPlanet = await Storage.get('playerPlanet', 'EARTH');
+        
         const savedSide = await Storage.get('isPlayerRight', 'false');
         this.isPlayerRight = (savedSide === 'true');
         this.difficulty = await Storage.get('difficulty', 'MEDIUM');
@@ -61,6 +91,19 @@ export class GameScene extends Phaser.Scene {
         this.p2Health = 3;
         this.playerStats = [0, 0, 0];
         
+        // Almacén para limpiar globos de diálogo
+        this.activeBubbles = [];
+
+        // --- CREAR ANIMACIÓN DE PLANETA ---
+        if (!this.anims.exists('planet_rotate')) {
+            this.anims.create({
+                key: 'planet_rotate',
+                frames: this.anims.generateFrameNumbers('planet_tierra', { start: 0, end: 399 }),
+                frameRate: 6.67,
+                repeat: -1
+            });
+        }
+
         this.fatalityManager = new FatalityManager(this);
 
         this.buildGame();
@@ -72,96 +115,237 @@ export class GameScene extends Phaser.Scene {
     buildGame() {
         const { width, height } = this.scale;
         const safeTop = this.game.registry.get('safeTop') || 0;
-        const safeBottom = this.game.registry.get('safeBottom') || 0;
-        const SAFE_TOP = Math.max(safeTop, 50); 
-        const SAFE_BOTTOM = Math.max(safeBottom, 20);
+        const SAFE_TOP = Math.max(safeTop, 40); 
         const CENTER_X = width / 2;
-        const HEAD_H = height * 0.18;
-        const FOOT_Y = (height * 0.72) - (SAFE_BOTTOM > 20 ? SAFE_BOTTOM / 2 : 0);
+        const FOOT_Y = height * 0.72;
         const BAR_Y = FOOT_Y - 25;
+        this.barY = BAR_Y; // Guardamos para referencia del botón PLAY
 
+        // --- RESTAURAR MÁRGENES Y CUADRÍCULA ---
         this.mainMargin = this.add.graphics();
         this.updateMainMargins(width, height, SAFE_TOP);
         this.gridGraphics = this.add.graphics();
+        this.drawGrid();
 
-        const timerStyle = { fontSize: '12px', fontFamily: CONFIG.FONTS.MAIN, fill: CONFIG.COLORS.TEXT_MAIN };
-        const barW = width * 0.4;
-        const barH = 20;
-        const radius = 10; 
+        // ==========================================
+        // CAMPO 1: HUD SUPERIOR (IDENTIDAD GALÁCTICA)
+        const HUD_BASE_Y = SAFE_TOP + 45; // Bajamos el origen para que el planeta no toque el borde
+        
+        // Calculamos la posición de la línea divisoria (Campo 1 / Campo 2)
+        const HUD_LIMIT_Y = height * 0.18 + 50; 
+        const HEARTS_Y = HUD_LIMIT_Y - 3; // Corazones a 3px de la línea
 
-        // Barra P1
-        const bg1 = this.add.graphics();
-        bg1.fillStyle(0x333333, 1);
-        bg1.fillRoundedRect(width * 0.25 - barW/2, BAR_Y - barH/2, barW, barH, radius);
-        bg1.lineStyle(2, 0xffffff, 1);
-        bg1.strokeRoundedRect(width * 0.25 - barW/2, BAR_Y - barH/2, barW, barH, radius);
-        this.timeBar1 = this.add.rectangle(width * 0.25, BAR_Y, barW, barH, CONFIG.COLORS.SUCCESS);
-        const mask1 = this.add.graphics().setVisible(false);
-        mask1.fillStyle(0xffffff);
-        mask1.fillRoundedRect(width * 0.25 - barW/2, BAR_Y - barH/2, barW, barH, radius);
-        this.timeBar1.setMask(mask1.createGeometryMask());
-        this.timeText1 = this.add.text(width * 0.25, BAR_Y, '5s', timerStyle).setOrigin(0.5);
-
-        // Barra P2
-        const bg2 = this.add.graphics();
-        bg2.fillStyle(0x333333, 1);
-        bg2.fillRoundedRect(width * 0.75 - barW/2, BAR_Y - barH/2, barW, barH, radius);
-        bg2.lineStyle(2, 0xffffff, 1);
-        bg2.strokeRoundedRect(width * 0.75 - barW/2, BAR_Y - barH/2, barW, barH, radius);
-        this.timeBar2 = this.add.rectangle(width * 0.75, BAR_Y, barW, barH, CONFIG.COLORS.SUCCESS);
-        const mask2 = this.add.graphics().setVisible(false);
-        mask2.fillStyle(0xffffff);
-        mask2.fillRoundedRect(width * 0.75 - barW/2, BAR_Y - barH/2, barW, barH, radius);
-        this.timeBar2.setMask(mask2.createGeometryMask());
-        this.timeText2 = this.add.text(width * 0.75, BAR_Y, '5s', timerStyle).setOrigin(0.5);
-
-        const cpuNames = ['JUAN', 'ANA', 'LUIS', 'SOFIA', 'CARLOS', 'MARIA', 'DAVID', 'ELENA', 'PEDRO', 'LAURA', 'DIEGO', 'LUCIA'];
+        // --- TARJETAS DE IDENTIDAD ---
+        const cpuNames = ['KORB-7', 'ZORGON', 'X-AE-12', 'UNIT-01', 'VOID-WALKER'];
+        const cpuPlanets = ['MARS', 'KEPLER-186F', 'CYBERIA', 'NEBULA-X', 'TITAN'];
+        
         this.cpuName = Phaser.Utils.Array.GetRandom(cpuNames);
+        this.cpuPlanet = Phaser.Utils.Array.GetRandom(cpuPlanets);
+        this.cpuSpecies = 'ALIEN'; // Valor por defecto para la CPU
 
         const p1X = this.isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5;
         const p2X = this.isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
 
-        const statusStyle = { fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.LARGE, fill: CONFIG.COLORS.TEXT_MAIN };
-        this.p1Status = this.add.text(p1X, (height * 0.18 * 0.4) + SAFE_TOP, this.playerName, statusStyle).setOrigin(0.5);
-        this.p2Status = this.add.text(p2X, (HEAD_H * 0.4) + SAFE_TOP, this.cpuName, statusStyle).setOrigin(0.5);
+        // --- CONSTRUIR PERFIL JUGADOR (P1) ---
+        this.createProfileCard(p1X, HUD_BASE_Y, this.playerName, this.playerPlanet, true, HEARTS_Y);
+        this.p1Score = this.createHearts(p1X, HEARTS_Y);
+
+        // --- CONSTRUIR PERFIL RIVAL (CPU/P2) ---
+        this.createProfileCard(p2X, HUD_BASE_Y, this.cpuName, this.cpuPlanet, false, HEARTS_Y);
+        this.p2Score = this.createHearts(p2X, HEARTS_Y);
+
+        // ==========================================
+        // CAMPO 2: ZONA CENTRAL (ESCENARIO DE DUELO)
+        // ==========================================
+        const AVATAR_Y = (height * 0.42) - 90; // Subido 40px adicionales (total -90)
+        const EMOJI_Y = (height * 0.58) + 20; // Bajado 20px adicionales
+
+        // --- ÁREA CENTRAL: AVATARES ---
+        this.createAvatarFrames(p1X, p2X, AVATAR_Y);
+
+        // --- EMOJIS DE RESULTADO ---
+        const emojiStyle = { fontSize: '100px', padding: { x: 20, y: 20 } };
         
-        this.p1Score = this.createHearts(p1X, (HEAD_H * 0.7) + SAFE_TOP);
-        this.p2Score = this.createHearts(p2X, (HEAD_H * 0.7) + SAFE_TOP);
-        
-        const emojiStyle = { fontSize: CONFIG.FONTS.SIZES.EMOJI_BIG, padding: { x: 20, y: 20 } };
-        this.p1Emoji = this.add.text(p1X, height * 0.45, '✊', emojiStyle).setOrigin(0.5).setScale(0);
-        this.p2Emoji = this.add.text(p2X, height * 0.45, '✊', emojiStyle).setOrigin(0.5).setScale(0);
+        this.p1Emoji = this.add.text(p1X, EMOJI_Y, '✊', emojiStyle).setOrigin(0.5).setScale(0);
+        this.p2Emoji = this.add.text(p2X, EMOJI_Y, '✊', emojiStyle).setOrigin(0.5).setScale(0);
 
-        this.p1X = this.add.text(p1X, height * 0.45, '❌', emojiStyle).setOrigin(0.5).setAlpha(0).setDepth(10);
-        this.p2X = this.add.text(p2X, height * 0.45, '❌', emojiStyle).setOrigin(0.5).setAlpha(0).setDepth(10);
+        this.p1X = this.add.text(p1X, EMOJI_Y, '❌', emojiStyle).setOrigin(0.5).setAlpha(0).setDepth(10);
+        this.p2X = this.add.text(p2X, EMOJI_Y, '❌', emojiStyle).setOrigin(0.5).setAlpha(0).setDepth(10);
 
-        this.game.events.on('blur', () => this.pauseGame());
-        this.game.events.on('focus', () => this.resumeGame());
+        // ==========================================
+        // CAMPO 3: PIE DE PANTALLA (INTERFAZ DE CONTROL)
+        // ==========================================
+        // --- SISTEMA DE TIEMPO (BARRAS INTEGRADAS) ---
+        const timerStyle = { fontSize: '12px', fontFamily: CONFIG.FONTS.MAIN, fill: CONFIG.COLORS.TEXT_MAIN };
+        const barW = width * 0.4;
+        const barH = 20;
+        const R = 77; // Radio del botón (75) + 2px de separación
+        const xc = width / 2;
+        const yc = this.barY - 40; // Centro del botón PLAY
 
-        if (window.Capacitor && window.Capacitor.Plugins.App) {
-            window.Capacitor.Plugins.App.addListener('pause', () => this.pauseGame());
-            window.Capacitor.Plugins.App.addListener('resume', () => this.resumeGame());
-        }
+        // Función matemática para dibujar la barra con el recorte circular exacto
+        const drawBarPath = (gfx, isP1) => {
+            const yTop = this.barY - barH/2;
+            const yBottom = this.barY + barH/2;
+            
+            // Calculamos la intersección X exacta del círculo con las líneas Y superior e inferior
+            const dxTop = Math.sqrt(Math.pow(R, 2) - Math.pow(yTop - yc, 2));
+            const dxBottom = Math.sqrt(Math.pow(R, 2) - Math.pow(yBottom - yc, 2));
+            
+            // Ángulos para el arco
+            const angleTop = Math.asin((yTop - yc) / R);
+            const angleBottom = Math.asin((yBottom - yc) / R);
+
+            const xStart = isP1 ? xc - barW - 20 : xc + barW + 20; // Extremo externo
+            const xArcTop = isP1 ? xc - dxTop : xc + dxTop;
+            const xArcBottom = isP1 ? xc - dxBottom : xc + dxBottom;
+
+            gfx.beginPath();
+            gfx.moveTo(xStart, yTop);
+            gfx.lineTo(xArcTop, yTop);
+            
+            if (isP1) {
+                // Arco en la parte izquierda del círculo
+                gfx.arc(xc, yc, R, Math.PI - angleTop, Math.PI - angleBottom, true);
+            } else {
+                // Arco en la parte derecha del círculo
+                gfx.arc(xc, yc, R, angleTop, angleBottom, false);
+            }
+            
+            gfx.lineTo(xStart, yBottom);
+            gfx.closePath();
+            gfx.fillPath();
+            gfx.strokePath();
+        };
+
+        // Fondo Barra P1
+        const bg1 = this.add.graphics().setDepth(100);
+        bg1.fillStyle(0x000000, 0.5);
+        bg1.lineStyle(2, CONFIG.COLORS.P1_BLUE, 0.5);
+        drawBarPath(bg1, true);
+
+        // Progreso P1 (Lado Izquierdo)
+        const xP1 = this.isPlayerRight ? width * 0.75 : width * 0.25;
+        this.timeBar1 = this.add.rectangle(xP1 + barW/2, this.barY, barW, barH, CONFIG.COLORS.P1_BLUE)
+            .setOrigin(1, 0.5) // Origen a la derecha para que se vacíe hacia la izquierda
+            .setDepth(101);
+        const mask1 = this.add.graphics().setVisible(false);
+        mask1.fillStyle(0xffffff);
+        drawBarPath(mask1, true);
+        this.timeBar1.setMask(mask1.createGeometryMask());
+
+        // Fondo Barra P2 (Lado Derecho)
+        const bg2 = this.add.graphics().setDepth(100);
+        bg2.fillStyle(0x000000, 0.5);
+        bg2.lineStyle(2, CONFIG.COLORS.P1_BLUE, 0.5);
+        drawBarPath(bg2, false);
+
+        // Progreso P2 (Lado Derecho)
+        const xP2 = !this.isPlayerRight ? width * 0.75 : width * 0.25;
+        this.timeBar2 = this.add.rectangle(xP2 - barW/2, this.barY, barW, barH, CONFIG.COLORS.P1_BLUE)
+            .setOrigin(0, 0.5) // Origen a la izquierda para que se vacíe hacia la derecha
+            .setDepth(101);
+        const mask2 = this.add.graphics().setVisible(false);
+        mask2.fillStyle(0xffffff);
+        drawBarPath(mask2, false);
+        this.timeBar2.setMask(mask2.createGeometryMask());
+
+        this.timeText1 = this.add.text(width * 0.25, this.barY - 20, 'READY', timerStyle).setOrigin(0.5).setDepth(102);
+        this.timeText2 = this.add.text(width * 0.75, this.barY - 20, 'READY', timerStyle).setOrigin(0.5).setDepth(102);
 
         this.createResponsiveButtons(width, height, FOOT_Y);
-        this.createControls(width, height, SAFE_BOTTOM);
+        this.createControls(width, height, 20);
 
-        const pixelGraphics = this.make.graphics({x: 0, y: 0, add: false});
-        pixelGraphics.fillStyle(0xffffff, 1);
-        pixelGraphics.fillRect(0, 0, 6, 6);
-        pixelGraphics.generateTexture('pixel', 6, 6);
-        this.vfx = this.add.particles(0, 0, 'pixel', {
-            speed: { min: -300, max: 300 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 1, end: 0 },
-            lifespan: 800,
-            gravityY: 400,
-            emitting: false
-        });
-        
         this.cameras.main.alpha = 0;
         this.tweens.add({ targets: this.cameras.main, alpha: 1, duration: CONFIG.TIMING.FADE_DURATION });
-        this.checkTutorial();
+    }
+
+    createProfileCard(x, baseY, name, planet, isP1, heartsY) {
+        const container = this.add.container(x, baseY);
+        
+        // --- CÁLCULO DE CENTRADO SIMÉTRICO PARA EL PLANETA ---
+        const planetSize = 140;
+        
+        const heartsRelativeY = heartsY - baseY;
+        const BOTTOM_MARGIN = 25;
+        const nameY = heartsRelativeY - (BOTTOM_MARGIN + 15);
+        const speciesY = nameY - 22;
+        const planetTxtY = speciesY - 12; // Inicio del bloque de texto
+        
+        // El centro del planeta debe estar justo a la mitad del espacio superior (0) y el inicio de los textos (planetTxtY)
+        // Subimos 25px extra para evitar colisión con textos al animar
+        const planetCenterY = ((planetTxtY - (planetSize/2)) / 2) - 15; 
+
+        // 1. Planeta (Sprite Animado)
+        // Fondo circular para dar profundidad
+        const bgCircle = this.add.circle(0, planetCenterY, planetSize/2, 0x000000, 0.8);
+        const borderCircle = this.add.graphics();
+        borderCircle.lineStyle(2, CONFIG.COLORS.P1_BLUE, 0.6);
+        borderCircle.strokeCircle(0, planetCenterY, planetSize/2);
+
+        const planetSprite = this.add.sprite(0, planetCenterY, 'planet_tierra')
+            .setDisplaySize(planetSize * 0.9, planetSize * 0.9) // Ajustar tamaño un poco menor al borde
+            .play('planet_rotate');
+
+        // 2. Bloque de Datos
+        const nameTxt = this.add.text(0, nameY, name, {
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: '14px', fill: CONFIG.COLORS.TEXT_MAIN
+        }).setOrigin(0.5);
+
+        const species = isP1 ? this.playerSpecies : this.cpuSpecies;
+        const speciesTxt = this.add.text(0, speciesY, `SPECIES: ${species || 'UNKNOWN'}`, {
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: '8px', fill: CONFIG.COLORS.TEXT_MUTED
+        }).setOrigin(0.5);
+
+        const planetTxt = this.add.text(0, planetTxtY, `PLANET: ${planet}`, {
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: '8px', fill: CONFIG.COLORS.TEXT_MUTED
+        }).setOrigin(0.5);
+
+        container.add([bgCircle, planetSprite, borderCircle, planetTxt, speciesTxt, nameTxt]);
+        
+        if (isP1) this.p1Status = nameTxt;
+        else this.p2Status = nameTxt;
+    }
+
+    createAvatarFrames(p1X, p2X, y) {
+        const frameW = 220; // Agrandado 40px
+        const frameH = 220; // Agrandado 40px
+
+        [p1X, p2X].forEach((x, i) => {
+            const isP1 = (i === 0);
+            const container = this.add.container(x, y);
+            
+            // Fondo y borde del Avatar (Estilo Terminal)
+            const bg = this.add.graphics();
+            bg.fillStyle(0x000000, 0.5);
+            bg.lineStyle(3, CONFIG.COLORS.P1_BLUE, 0.8);
+            bg.fillRoundedRect(-frameW/2, -frameH/2, frameW, frameH, 10);
+            bg.strokeRoundedRect(-frameW/2, -frameH/2, frameW, frameH, 10);
+            
+            // Avatar Sprite
+            const avatarKey = isP1 ? 'avatar_p1' : 'avatar_cpu';
+            const avatar = this.add.image(0, 0, avatarKey);
+            
+            // Escalar manteniendo proporción para encajar en el marco
+            // Dejamos un margen de 10px (frameW - 20)
+            const scaleX = (frameW - 20) / avatar.width;
+            const scaleY = (frameH - 20) / avatar.height;
+            const scale = Math.min(scaleX, scaleY);
+            avatar.setScale(scale);
+
+            container.add([bg, avatar]);
+            
+            // Animación de respiración para el cuadro del avatar
+            this.tweens.add({
+                targets: container,
+                y: '+=5',
+                duration: 2000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+                delay: i * 500
+            });
+        });
     }
 
     async checkTutorial() {
@@ -218,7 +402,7 @@ export class GameScene extends Phaser.Scene {
         for (let i = 0; i < 3; i++) {
             const hContainer = this.add.container((i - 1) * 40, 0); 
             const heartGfx = this.add.graphics();
-            heartGfx.fillStyle(0xff0000, 1);
+            heartGfx.fillStyle(CONFIG.COLORS.P1_BLUE, 1);
             heartGfx.lineStyle(2, 0xffffff, 1);
             const size = 8; 
             heartGfx.fillCircle(-size, -size/2, size);
@@ -236,7 +420,7 @@ export class GameScene extends Phaser.Scene {
             heartGfx.lineTo(0, size*2.5);
             heartGfx.lineTo(size + offset, -size/2 + (size*0.5));
             heartGfx.strokePath();
-            const shine = this.add.circle(-size, -size, 3, 0xffffff, 0.6);
+            const shine = this.add.circle(-size, -size, 3, 0xffffff, 0.4);
             hContainer.add([heartGfx, shine]);
             hContainer.setData('active', true);
             container.add(hContainer);
@@ -255,7 +439,7 @@ export class GameScene extends Phaser.Scene {
                     hContainer.setAlpha(1);
                     const gfx = hContainer.list[0];
                     gfx.clear();
-                    gfx.fillStyle(0xff0000, 1);
+                    gfx.fillStyle(CONFIG.COLORS.P1_BLUE, 1);
                     gfx.lineStyle(2, 0xffffff, 1);
                     this.redrawHeart(gfx);
                 }
@@ -263,9 +447,9 @@ export class GameScene extends Phaser.Scene {
             else if (index >= lives && isActive) {
                 hContainer.setData('active', false);
                 this.tweens.add({ targets: hContainer, y: -20, scale: 1.5, duration: 200, yoyo: true, onComplete: () => {
-                    hContainer.setAlpha(0.5); hContainer.setScale(1);
+                    hContainer.setAlpha(0.3); hContainer.setScale(1);
                     const gfx = hContainer.list[0];
-                    gfx.clear(); gfx.fillStyle(0x333333, 1); gfx.lineStyle(2, 0x888888, 1);
+                    gfx.clear(); gfx.fillStyle(CONFIG.COLORS.TEXT_MUTED, 1); gfx.lineStyle(2, CONFIG.COLORS.TEXT_MUTED, 1);
                     this.redrawHeart(gfx);
                 }});
             }
@@ -331,9 +515,19 @@ export class GameScene extends Phaser.Scene {
     makeSingleBtn(x, y, name, emoji, isP1, index) {
         let baseColor = isP1 ? CONFIG.COLORS.P1_BLUE : CONFIG.COLORS.CPU_RED;
         let container = this.add.container(x, y).setDepth(500); 
-        const bg = this.add.circle(0, 0, 38, baseColor).setStrokeStyle(CONFIG.UI.BORDER_WIDTH, 0xffffff);
-        const emo = this.add.text(0, 0, emoji, { fontSize: CONFIG.FONTS.SIZES.EMOJI, padding: { x: 10, y: 10 } }).setOrigin(0.5);
+        // Borde con color de bando, fondo transparente
+        const bg = this.add.circle(0, 0, 38, 0x000000, 0.1).setStrokeStyle(CONFIG.UI.BORDER_WIDTH, baseColor);
+        
+        const emo = this.add.text(0, 0, emoji, { 
+            fontSize: CONFIG.FONTS.SIZES.EMOJI, 
+            padding: { x: 10, y: 10 } 
+        }).setOrigin(0.5);
+        
+        // CAPA DE FILTRO (Restaurada)
+        const filter = this.add.circle(0, 0, 38, 0x000000, 0.4);
+
         const txt = this.add.text(0, 50, name, { fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.SMALL, fill: CONFIG.COLORS.TEXT_MAIN }).setOrigin(0.5);
+        container.add([bg, emo, filter, txt]);
         container.add([bg, emo, txt]);
         const audioKeys = ['sfx_rock', 'sfx_paper', 'sfx_scissors'];
         if (isP1) {
@@ -424,6 +618,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     startRound() {
+        // Limpiar diálogos anteriores al iniciar ronda
+        if (this.activeBubbles) {
+            this.activeBubbles.forEach(b => { if (b && b.destroy) b.destroy(); });
+            this.activeBubbles = [];
+        }
+
         this.isResolving = false; this.isPlayingRound = true; 
         this.p1X.setAlpha(0); this.p2X.setAlpha(0);
         const { width, height } = this.scale;
@@ -440,11 +640,25 @@ export class GameScene extends Phaser.Scene {
         [this.timeBar1, this.timeBar2].forEach(bar => { bar.setVisible(true).setFillStyle(CONFIG.COLORS.SUCCESS).width = (width * 0.4); });
         this.timeBar1.alpha = 0; this.timeBar2.alpha = 0; this.timeText1.alpha = 0; this.timeText2.alpha = 0;
         this.tweens.add({ targets: [this.timeBar1, this.timeBar2, this.timeText1, this.timeText2], alpha: 1, duration: 300 });
-        this.tweens.add({ targets: [this.timeBar1, this.timeBar2], width: 0, duration: CONFIG.TIMING.ROUND_DURATION, onUpdate: (tween) => {
-            const remaining = Math.ceil((1 - tween.progress) * 5);
-            this.timeText1.setText(remaining + 's'); this.timeText2.setText(remaining + 's');
-            if (tween.progress > 0.7) { this.timeBar1.setFillStyle(CONFIG.COLORS.CPU_RED); this.timeBar2.setFillStyle(CONFIG.COLORS.CPU_RED); }
-        }, onComplete: () => this.resolveRound(-1) });
+        
+        // Reset scale before starting
+        this.timeBar1.scaleX = 1;
+        this.timeBar2.scaleX = 1;
+
+        this.tweens.add({ 
+            targets: [this.timeBar1, this.timeBar2], 
+            scaleX: 0, 
+            duration: CONFIG.TIMING.ROUND_DURATION, 
+            onUpdate: (tween) => {
+                const remaining = Math.ceil((1 - tween.progress) * 5);
+                this.timeText1.setText(remaining + 's'); this.timeText2.setText(remaining + 's');
+                if (tween.progress > 0.7) { 
+                    this.timeBar1.setFillStyle(0xff0000); // Rojo en peligro
+                    this.timeBar2.setFillStyle(0xff0000); 
+                }
+            }, 
+            onComplete: () => this.resolveRound(-1) 
+        });
     }
 
     resolveRound(playerChoice) {
@@ -468,24 +682,84 @@ export class GameScene extends Phaser.Scene {
 
     getCpuChoice() { return OpponentAI.getChoice(this.difficulty, this.playerStats); }
 
-    showResults(p1, p2) {
-        // NO detener todo el audio, para que la música siga sonando
-        // this.sound.stopAll(); 
-        const icons = ['✊', '✋', '✌️'];
-        if (this.p1Emoji) this.p1Emoji.setText(p1 === -1 ? '❌' : icons[p1]);
-        if (this.p2Emoji) this.p2Emoji.setText(icons[p2]);
-        this.tweens.add({ targets: [this.p1Emoji, this.p2Emoji], scale: 1.5, duration: 100, yoyo: true, ease: 'Back.easeOut' });
-        let resultText = ""; let color = CONFIG.COLORS.TEXT_MAIN;
-        if (p1 === -1) { resultText = "TIME'S UP!"; color = "#ff0000"; this.p1Health--; AudioManager.playSFX(this, 'sfx_lose'); this.playImpactEffect(CONFIG.COLORS.CPU_RED, 0.8); }
-        else if (p1 === p2) { resultText = "DRAW!"; AudioManager.playSFX(this, 'sfx_tie'); this.playImpactEffect(0xaaaaaa, 0.5); this.p2Status.setText("DRAW!").setFill(color).setScale(0); this.tweens.add({ targets: this.p2Status, scale: 1.2, duration: 400, ease: 'Bounce.easeOut' }); }
-        else if ((p1 === 0 && p2 === 2) || (p1 === 1 && p2 === 0) || (p1 === 2 && p2 === 1)) { resultText = "YOU WIN!"; color = "#" + CONFIG.COLORS.P1_BLUE.toString(16); this.p2Health--; AudioManager.playSFX(this, 'sfx_win'); this.tweens.add({ targets: this.p2X, alpha: 1, scale: { from: 2, to: 1 }, duration: 300, ease: 'Bounce.easeOut' }); this.playImpactEffect(CONFIG.COLORS.P1_BLUE, 1.0); }
-        else { resultText = "YOU LOSE!"; color = "#" + CONFIG.COLORS.CPU_RED.toString(16); this.p1Health--; AudioManager.playSFX(this, 'sfx_lose'); this.tweens.add({ targets: this.p1X, alpha: 1, scale: { from: 2, to: 1 }, duration: 300, ease: 'Bounce.easeOut' }); this.playImpactEffect(CONFIG.COLORS.CPU_RED, 0.8); }
+                    showResults(p1, p2) {
+
+                        // NO detener todo el audio, para que la música siga sonando
+
+                        // this.sound.stopAll(); 
+
+                        const icons = ['✊', '✋', '✌️'];
+
+                        if (this.p1Emoji) this.p1Emoji.setText(p1 === -1 ? '❌' : icons[p1]);
+
+                        if (this.p2Emoji) this.p2Emoji.setText(icons[p2]);
+
+                        this.tweens.add({ targets: [this.p1Emoji, this.p2Emoji], scale: 1.5, duration: 100, yoyo: true, ease: 'Back.easeOut' });
+
+                        
+
+                        let resultText = ""; let color = CONFIG.COLORS.TEXT_MAIN;
+        
+        // --- LÓGICA DE RESULTADOS Y DIÁLOGOS ---
+        if (p1 === -1) { 
+            // SE ACABÓ EL TIEMPO (PIERDE P1)
+            resultText = "TIME'S UP!"; color = "#ff0000"; 
+            this.p1Health--; 
+            AudioManager.playSFX(this, 'sfx_lose'); 
+            this.playImpactEffect(CONFIG.COLORS.CPU_RED, 0.8); 
+            
+            this.time.delayedCall(1000, () => {
+                this.showDialogue(true, 'LOSE'); 
+                this.showDialogue(false, 'WIN'); 
+            });
+        }
+        else if (p1 === p2) { 
+            // EMPATE
+            resultText = "DRAW!"; 
+            AudioManager.playSFX(this, 'sfx_tie'); 
+            this.playImpactEffect(CONFIG.COLORS.TEXT_MUTED, 0.5); 
+            this.p2Status.setText("DRAW!").setFill(color).setScale(0); 
+            this.tweens.add({ targets: this.p2Status, scale: 1.2, duration: 400, ease: 'Bounce.easeOut' }); 
+            
+            this.time.delayedCall(1000, () => {
+                this.showDialogue(true, 'DRAW');
+                this.showDialogue(false, 'DRAW');
+            });
+        }
+        else if ((p1 === 0 && p2 === 2) || (p1 === 1 && p2 === 0) || (p1 === 2 && p2 === 1)) { 
+            // GANA JUGADOR
+            resultText = "YOU WIN!"; color = CONFIG.COLORS.TEXT_MAIN; 
+            this.p2Health--; 
+            AudioManager.playSFX(this, 'sfx_win'); 
+            this.tweens.add({ targets: this.p2X, alpha: 1, scale: { from: 2, to: 1 }, duration: 300, ease: 'Bounce.easeOut' }); 
+            this.playImpactEffect(CONFIG.COLORS.P1_BLUE, 1.0); 
+            
+            this.time.delayedCall(1000, () => {
+                this.showDialogue(true, 'WIN');
+                this.showDialogue(false, 'LOSE');
+            });
+        }
+        else { 
+            // PIERDE JUGADOR
+            resultText = "YOU LOSE!"; color = CONFIG.COLORS.TEXT_MUTED; 
+            this.p1Health--; 
+            AudioManager.playSFX(this, 'sfx_lose'); 
+            this.tweens.add({ targets: this.p1X, alpha: 1, scale: { from: 2, to: 1 }, duration: 300, ease: 'Bounce.easeOut' }); 
+            this.playImpactEffect(CONFIG.COLORS.TEXT_MUTED, 0.8); 
+            
+            this.time.delayedCall(1000, () => {
+                this.showDialogue(true, 'LOSE');
+                this.showDialogue(false, 'WIN');
+            });
+        }
+
         this.p1Status.setText(resultText).setFill(color).setScale(0);
         this.tweens.add({ targets: this.p1Status, scale: 1.2, duration: 400, ease: 'Bounce.easeOut' });
         this.updateHearts(this.p1Score, this.p1Health); this.updateHearts(this.p2Score, this.p2Health);
+        
         if (this.p2Health <= 0) { this.time.delayedCall(500, () => this.triggerFatality(p1, this.p2Emoji, this.p1Emoji, true)); } 
         else if (this.p1Health <= 0) { this.time.delayedCall(500, () => this.triggerFatality(p2, this.p1Emoji, this.p2Emoji, false)); } 
-        else { this.time.delayedCall(600, () => this.createNextRondaBtn(this.scale.width, this.scale.height)); }
+        else { this.time.delayedCall(1500, () => this.createNextRondaBtn(this.scale.width, this.scale.height)); } // Aumentado delay para leer diálogo
     }
 
     triggerFatality(choiceIndex, target, attacker, isPlayerWin) {
@@ -517,7 +791,9 @@ export class GameScene extends Phaser.Scene {
         
         if (this.nextRondaBtn) this.nextRondaBtn.destroy();
         
-        this.nextRondaBtn = this.add.container(width / 2, height * 0.45).setDepth(2000);
+        // Posicionamos 40px por encima de las barras de tiempo
+        const targetY = this.barY - 40;
+        this.nextRondaBtn = this.add.container(width / 2, targetY).setDepth(2000);
         
         const circle = this.add.circle(0, 0, 75, CONFIG.COLORS.SUCCESS).setStrokeStyle(4, 0xffffff);
         const text = this.add.text(0, 0, labelText, { 
@@ -561,8 +837,8 @@ export class GameScene extends Phaser.Scene {
     resetButtonColors() {
         if (!this.p1ButtonsBg || !this.p1ButtonsTxt) return;
         for (let i = 0; i < 3; i++) {
-            if (this.p1ButtonsBg[i]) { this.p1ButtonsBg[i].setFillStyle(CONFIG.COLORS.P1_BLUE); this.p1ButtonsTxt[i].setFill(CONFIG.COLORS.TEXT_MAIN); }
-            if (this.p2ButtonsBg[i]) { this.p2ButtonsBg[i].setFillStyle(CONFIG.COLORS.CPU_RED); this.p2ButtonsTxt[i].setFill(CONFIG.COLORS.TEXT_MAIN); }
+            if (this.p1ButtonsBg[i]) { this.p1ButtonsBg[i].setFillStyle(0x000000, 0.1); this.p1ButtonsTxt[i].setFill(CONFIG.COLORS.TEXT_MAIN); }
+            if (this.p2ButtonsBg[i]) { this.p2ButtonsBg[i].setFillStyle(0x000000, 0.1); this.p2ButtonsTxt[i].setFill(CONFIG.COLORS.TEXT_MAIN); }
         }
     }
 
@@ -581,5 +857,88 @@ export class GameScene extends Phaser.Scene {
         this.p1ButtonsBg.forEach((btn, i) => { if(btn && btn.parentContainer) this.tweens.add({ targets: btn.parentContainer, x: p1X, duration: 300, ease: 'Back.easeOut' }); });
         this.p2ButtonsBg.forEach((btn, i) => { if(btn && btn.parentContainer) this.tweens.add({ targets: btn.parentContainer, x: p2X, duration: 300, ease: 'Back.easeOut' }); });
         this.time.delayedCall(310, () => { this.isSwitchingSide = false; });
+    }
+
+    showDialogue(isP1, type) {
+        const speakerKey = isP1 ? 'P1' : 'CPU';
+        
+        // Obtener frase única del sistema de barajas
+        const text = this.getDialoguePhrase(speakerKey, type);
+        
+        // Coordenadas
+        const { width, height } = this.scale;
+        const CENTER_X = width / 2;
+        
+        // Determinar posición X basada en el lado del jugador
+        let targetX;
+        if (isP1) {
+            targetX = this.isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5;
+        } else {
+            targetX = this.isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
+        }
+
+        // Posición Y: Debajo del Avatar
+        // Avatar Y base = (height * 0.42) - 90
+        // Altura frame = 220, mitad = 110.
+        // Borde inferior = AVATAR_Y + 110.
+        // Margen extra = 20.
+        const AVATAR_Y = (height * 0.42) - 90;
+        const targetY = AVATAR_Y + 110 + 30;
+
+        const color = isP1 ? CONFIG.COLORS.P1_BLUE : CONFIG.COLORS.CPU_RED;
+
+        this.createSpeechBubble(targetX, targetY, 180, 50, text, color);
+    }
+
+    createSpeechBubble(x, y, width, height, quote, color) {
+        const bubble = this.add.container(x, y).setDepth(2500);
+        
+        // Guardar referencia para borrar después
+        if (!this.activeBubbles) this.activeBubbles = [];
+        this.activeBubbles.push(bubble);
+        
+        // Fondo transparente, solo borde
+        const graphics = this.add.graphics();
+        graphics.lineStyle(3, color, 1);
+        graphics.strokeRoundedRect(-width / 2, -height / 2, width, height, 10);
+        
+        // Texto vacío inicialmente (para efecto typewriter)
+        const content = this.add.text(0, 0, '', { 
+            fontFamily: CONFIG.FONTS.MAIN, 
+            fontSize: '14px', 
+            fill: '#ffffff', 
+            align: 'center',
+            wordWrap: { width: width - 20 } 
+        }).setOrigin(0.5);
+
+        bubble.add([graphics, content]);
+        
+        // Animación de entrada (Pop)
+        bubble.setScale(0);
+        this.tweens.add({
+            targets: bubble,
+            scale: 1,
+            duration: 300,
+            ease: 'Back.easeOut',
+            onComplete: () => {
+                // Iniciar efecto de escritura letra por letra
+                this.typewriterEffect(content, quote);
+            }
+        });
+    }
+
+    typewriterEffect(textObject, fullText) {
+        const length = fullText.length;
+        let i = 0;
+        this.time.addEvent({
+            callback: () => {
+                textObject.text += fullText[i];
+                i++;
+                // Sonido suave de escritura (opcional)
+                // if (i % 2 === 0) AudioManager.playSFX(this, 'sfx_blip'); 
+            },
+            repeat: length - 1,
+            delay: 50 // Velocidad de escritura (50ms por letra)
+        });
     }
 }

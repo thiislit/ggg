@@ -1,3 +1,5 @@
+import { CONFIG } from '../config.js';
+
 export class BackgroundScene extends Phaser.Scene {
     constructor() {
         super('BackgroundScene');
@@ -6,7 +8,44 @@ export class BackgroundScene extends Phaser.Scene {
     create() {
         const width = this.scale.width;
         const height = this.scale.height;
+        
+        this.cameras.main.setScroll(0, 0);
+        this.cameras.main.setBackgroundColor(CONFIG.COLORS.BG_DARK);
+        
+        // --- MODO IMAGEN ESTÁTICA ---
+        // Centramos la imagen para que el "palpitar" sea simétrico
+        this.bgStatic = this.add.image(width / 2, height / 2, 'v3_bg');
+        
+        // Aplicamos un tinte verdoso muy sutil para efecto terminal
+        this.bgStatic.setTint(0x88ff88);
+        
+        // Forzamos el tamaño inicial para llenar la pantalla
+        this.bgStatic.setDisplaySize(width, height);
+        this.bgStatic.setDepth(-100);
 
+        // --- ANIMACIÓN DE PALPITAR (EFECTO RESPIRACIÓN) ---
+        // 1. Escala: Crece un 4% de forma más fluida
+        this.tweens.add({
+            targets: this.bgStatic,
+            scale: this.bgStatic.scale * 1.04,
+            duration: 3000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        // 2. Brillo: Ciclo más corto para dar vida
+        this.tweens.add({
+            targets: this.bgStatic,
+            alpha: 0.85,
+            duration: 2500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        /* 
+        // --- MODO ANIMADO (COMENTADO PARA RESPALDO) ---
         // Evitar error de textura duplicada al reiniciar la escena
         if (this.textures.exists('spaceBackground')) {
             this.textures.remove('spaceBackground');
@@ -35,10 +74,13 @@ export class BackgroundScene extends Phaser.Scene {
 
         // Añadir la imagen al mundo (es lo que se verá)
         this.bgImage = this.add.image(0, 0, 'spaceBackground').setOrigin(0);
-        this.bgImage.setDepth(-100); // Asegurar que esté al fondo
+        this.bgImage.setDepth(-100); 
+        */
     }
 
     update(time, delta) {
+        /*
+        // --- ACTUALIZACIÓN MODO ANIMADO (COMENTADO) ---
         const width = this.scale.width;
         const height = this.scale.height;
 
@@ -56,6 +98,7 @@ export class BackgroundScene extends Phaser.Scene {
 
         // ¡Importante! Decirle a Phaser que la textura cambió
         this.canvasTexture.refresh();
+        */
     }
 
     // --- LÓGICA DEL LABORATORIO ADAPTADA ---

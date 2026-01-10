@@ -10,22 +10,23 @@ export const CONFIG = {
         BUTTON_BOUNCE: 50       // Duración del efecto de clic
     },
 
-    // Paleta de Colores Centralizada
+    // Paleta de Colores Centralizada (Estilo Terminal Retro)
     COLORS: {
-        // Colores Principales (Neon)
-        P1_BLUE: 0x00A8F3,      // Azul Player 1 (Cyan)
-        CPU_RED: 0xF34235,      // Rojo CPU/Danger
-        SUCCESS: 0x2ecc71,      // Verde Éxito/Restart
-        GOLD: 0xffd700,         // Dorado Récords
+        // Colores Principales (Monocromo Verde)
+        P1_BLUE: 0x00ff41,      // Verde Neón (Fósforo) - Jugador
+        CPU_RED: 0x008f11,      // Verde Oscuro - Rival/Secundario
+        SUCCESS: 0x00ff41,      // Verde para éxito
+        GOLD: 0xffffff,         // Blanco para récords/especiales
         
         // UI y Textos
-        TEXT_MAIN: '#ffffff',   // Blanco puro
-        TEXT_MUTED: '#888888',  // Gris apagado (créditos, disabled)
-        TEXT_DARK: '#000000',   // Negro para textos sobre botones claros
+        TEXT_MAIN: '#00ff41',   // Verde Neón
+        TEXT_MUTED: '#005f0a',  // Verde muy oscuro para elementos "apagados"
+        TEXT_LIGHT: '#ffffff',  // Blanco para contrastes
+        TEXT_DARK: '#1a1a1a',   // Gris oscuro para botones invertidos
         
         // Fondos
-        BG_DARK: 0x000000,      // Negro total
-        UI_OVERLAY: 0x000000    // Color para capas semitransparentes
+        BG_DARK: 0x1a1a1a,      // Gris Oscuro de terminal
+        UI_OVERLAY: 0x000000    // Negro para sombras y capas
     },
 
     // Estilos de Fuente
