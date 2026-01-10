@@ -618,6 +618,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     startRound() {
+        // --- LIMPIEZA PROFUNDA (GARBAGE COLLECTION) ---
+        // Detener cualquier timer pendiente que pudiera disparar un "Next Button" fantasma
+        if (this.nextRoundTimer) {
+            this.nextRoundTimer.remove(false);
+            this.nextRoundTimer = null;
+        }
+        
+        // Detener tweens viejos que pudieran seguir corriendo
+        this.tweens.killTweensOf([
+            this.p1Emoji, this.p2Emoji, 
+            this.timeBar1, this.timeBar2, 
+            this.p1Status, this.p2Status,
+            this.nextRondaBtn
+        ]);
+
         // Limpiar diálogos anteriores al iniciar ronda
         if (this.activeBubbles) {
             this.activeBubbles.forEach(b => { if (b && b.destroy) b.destroy(); });
@@ -626,16 +641,22 @@ export class GameScene extends Phaser.Scene {
 
         this.isResolving = false; this.isPlayingRound = true; 
         this.p1X.setAlpha(0); this.p2X.setAlpha(0);
+        
         const { width, height } = this.scale;
         const CENTER_X = width / 2;
         const p1TargetX = this.isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5;
         const p2TargetX = this.isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
-        this.p1Emoji.setText('✊').setScale(1).setAlpha(1);
-        this.p2Emoji.setText('✊').setScale(1).setAlpha(1);
+        
+        // RESET EXPLÍCITO DE ESTADO VISUAL
+        this.p1Emoji.setText('✊').setScale(1).setAlpha(1).setOrigin(0.5);
+        this.p2Emoji.setText('✊').setScale(1).setAlpha(1).setOrigin(0.5);
         this.p1Emoji.setAngle(this.isPlayerRight ? -90 : 90).setFlipX(!this.isPlayerRight);
         this.p2Emoji.setAngle(this.isPlayerRight ? 90 : -90).setFlipX(this.isPlayerRight);
+        
+        // Posición inicial fuera de pantalla para la entrada
         this.p1Emoji.x = p1TargetX < CENTER_X ? -200 : width + 200;
         this.p2Emoji.x = p2TargetX < CENTER_X ? -200 : width + 200;
+        
         this.tweens.add({ targets: [this.p1Emoji, this.p2Emoji], x: (target) => (target === this.p1Emoji ? p1TargetX : p2TargetX), duration: 500, ease: 'Back.easeOut', onStart: () => AudioManager.playSFX(this, 'sfx_reveal', { volume: 0.3 * AudioManager.volumes.sfx }) });
         [this.timeBar1, this.timeBar2].forEach(bar => { bar.setVisible(true).setFillStyle(CONFIG.COLORS.SUCCESS).width = (width * 0.4); });
         this.timeBar1.alpha = 0; this.timeBar2.alpha = 0; this.timeText1.alpha = 0; this.timeText2.alpha = 0;
@@ -663,42 +684,75 @@ export class GameScene extends Phaser.Scene {
 
     resolveRound(playerChoice) {
         this.isResolving = true;
+        // DETENER TODO: Aseguramos que nada se esté moviendo antes de calcular
         this.tweens.killTweensOf([this.timeBar1, this.timeBar2, this.p1Emoji, this.p2Emoji]);
+        
         const cpuChoice = this.getCpuChoice();
-        const p1BaseAngle = this.p1Emoji.angle;
-        const p2BaseAngle = this.p2Emoji.angle;
-        this.p1Emoji.setOrigin(0.5, 1); this.p2Emoji.setOrigin(0.5, 1);
+        
+        // CÁLCULO SEGURO DE ÁNGULOS (Hardcoded)
+        // En lugar de leer .angle (que puede tener error), lo definimos según el lado
+        const p1StartAngle = this.isPlayerRight ? -90 : 90;
+        const p2StartAngle = this.isPlayerRight ? 90 : -90;
+        
+        // Aseguramos que empiecen en la posición correcta sí o sí
+        this.p1Emoji.setAngle(p1StartAngle).setOrigin(0.5, 1);
+        this.p2Emoji.setAngle(p2StartAngle).setOrigin(0.5, 1);
+        
+        // Reset de posición X para evitar que se vayan desplazando al infinito
+        const { width } = this.scale;
+        const CENTER_X = width / 2;
+        const p1FixedX = this.isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5;
+        const p2FixedX = this.isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
+        this.p1Emoji.x = p1FixedX;
+        this.p2Emoji.x = p2FixedX;
+
         const offset = 60; 
-        this.p1Emoji.x += (p1BaseAngle > 0 ? -offset : offset); 
-        this.p2Emoji.x += (p2BaseAngle > 0 ? -offset : offset);
-        this.tweens.add({ targets: this.p1Emoji, angle: p1BaseAngle - 90, duration: 150, yoyo: true, repeat: 2, ease: 'Sine.easeInOut', onComplete: () => {
-            this.p1Emoji.setAngle(p1BaseAngle).setOrigin(0.5); this.p1Emoji.x -= (p1BaseAngle > 0 ? -offset : offset); 
-        }});
-        this.tweens.add({ targets: this.p2Emoji, angle: p2BaseAngle + 90, duration: 150, yoyo: true, repeat: 2, ease: 'Sine.easeInOut', onComplete: () => {
-            this.p2Emoji.setAngle(p2BaseAngle).setOrigin(0.5); this.p2Emoji.x -= (p2BaseAngle > 0 ? -offset : offset); 
-            this.showResults(playerChoice, cpuChoice);
-        }});
+        
+        // Posición inicial para el martillado (ligeramente desplazados)
+        this.p1Emoji.x += (p1StartAngle > 0 ? -offset : offset); 
+        this.p2Emoji.x += (p2StartAngle > 0 ? -offset : offset);
+
+        // Animación P1
+        this.tweens.add({ 
+            targets: this.p1Emoji, 
+            angle: p1StartAngle - 90, 
+            duration: 150, 
+            yoyo: true, 
+            repeat: 2, 
+            ease: 'Sine.easeInOut', 
+            onComplete: () => {
+                this.p1Emoji.setAngle(p1StartAngle).setOrigin(0.5); 
+                this.p1Emoji.x = p1FixedX; // Restaurar X exacta
+            }
+        });
+
+        // Animación P2
+        this.tweens.add({ 
+            targets: this.p2Emoji, 
+            angle: p2StartAngle + 90, 
+            duration: 150, 
+            yoyo: true, 
+            repeat: 2, 
+            ease: 'Sine.easeInOut', 
+            onComplete: () => {
+                this.p2Emoji.setAngle(p2StartAngle).setOrigin(0.5); 
+                this.p2Emoji.x = p2FixedX; // Restaurar X exacta
+                this.showResults(playerChoice, cpuChoice);
+            }
+        });
     }
 
     getCpuChoice() { return OpponentAI.getChoice(this.difficulty, this.playerStats); }
 
-                    showResults(p1, p2) {
-
-                        // NO detener todo el audio, para que la música siga sonando
-
-                        // this.sound.stopAll(); 
-
-                        const icons = ['✊', '✋', '✌️'];
-
-                        if (this.p1Emoji) this.p1Emoji.setText(p1 === -1 ? '❌' : icons[p1]);
-
-                        if (this.p2Emoji) this.p2Emoji.setText(icons[p2]);
-
-                        this.tweens.add({ targets: [this.p1Emoji, this.p2Emoji], scale: 1.5, duration: 100, yoyo: true, ease: 'Back.easeOut' });
-
-                        
-
-                        let resultText = ""; let color = CONFIG.COLORS.TEXT_MAIN;
+    showResults(p1, p2) {
+        // NO detener todo el audio, para que la música siga sonando
+        // this.sound.stopAll(); 
+        const icons = ['✊', '✋', '✌️'];
+        if (this.p1Emoji) this.p1Emoji.setText(p1 === -1 ? '❌' : icons[p1]);
+        if (this.p2Emoji) this.p2Emoji.setText(icons[p2]);
+        this.tweens.add({ targets: [this.p1Emoji, this.p2Emoji], scale: 1.5, duration: 100, yoyo: true, ease: 'Back.easeOut' });
+        
+        let resultText = ""; let color = CONFIG.COLORS.TEXT_MAIN;
         
         // --- LÓGICA DE RESULTADOS Y DIÁLOGOS ---
         if (p1 === -1) { 
@@ -759,7 +813,10 @@ export class GameScene extends Phaser.Scene {
         
         if (this.p2Health <= 0) { this.time.delayedCall(500, () => this.triggerFatality(p1, this.p2Emoji, this.p1Emoji, true)); } 
         else if (this.p1Health <= 0) { this.time.delayedCall(500, () => this.triggerFatality(p2, this.p1Emoji, this.p2Emoji, false)); } 
-        else { this.time.delayedCall(1500, () => this.createNextRondaBtn(this.scale.width, this.scale.height)); } // Aumentado delay para leer diálogo
+        else { 
+            // Guardamos referencia al timer para poder cancelarlo si es necesario
+            this.nextRoundTimer = this.time.delayedCall(1500, () => this.createNextRondaBtn(this.scale.width, this.scale.height)); 
+        }
     }
 
     triggerFatality(choiceIndex, target, attacker, isPlayerWin) {
