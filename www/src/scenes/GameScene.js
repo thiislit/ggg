@@ -979,6 +979,17 @@ export class GameScene extends Phaser.Scene {
         this.p1ButtonsBg.forEach((btn, i) => { if(btn && btn.parentContainer) this.tweens.add({ targets: btn.parentContainer, x: p1BtnX, duration: 300, ease: 'Back.easeOut' }); });
         this.p2ButtonsBg.forEach((btn, i) => { if(btn && btn.parentContainer) this.tweens.add({ targets: btn.parentContainer, x: p2BtnX, duration: 300, ease: 'Back.easeOut' }); });
         
+        // 5. Mover Globos de Diálogo Activos
+        if (this.activeBubbles && this.activeBubbles.length > 0) {
+            this.activeBubbles.forEach(bubble => {
+                if (bubble && bubble.active) {
+                    // Si el globo está a la izquierda (< CENTER_X), va a la derecha, y viceversa.
+                    const newX = (bubble.x < CENTER_X) ? (CENTER_X * 1.5) : (CENTER_X * 0.5);
+                    this.tweens.add({ targets: bubble, x: newX, duration: 300, ease: 'Power2' });
+                }
+            });
+        }
+
         this.time.delayedCall(310, () => { this.isSwitchingSide = false; });
     }
 
