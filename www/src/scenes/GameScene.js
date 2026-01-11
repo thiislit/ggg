@@ -268,9 +268,11 @@ export class GameScene extends Phaser.Scene {
         
         const heartsRelativeY = heartsY - baseY;
         const BOTTOM_MARGIN = 25;
+        
+        // Ajuste de espaciado vertical
         const nameY = heartsRelativeY - (BOTTOM_MARGIN + 15);
-        const speciesY = nameY - 22;
-        const planetTxtY = speciesY - 12; // Inicio del bloque de texto
+        const speciesY = nameY - 28; // Antes -22 (Subimos 6px)
+        const planetTxtY = speciesY - 14; // Antes -12 (Subimos un poco más y mantenemos ritmo)
         
         // El centro del planeta debe estar justo a la mitad del espacio superior (0) y el inicio de los textos (planetTxtY)
         // Subimos 25px extra para evitar colisión con textos al animar
@@ -303,8 +305,13 @@ export class GameScene extends Phaser.Scene {
 
         container.add([bgCircle, planetSprite, borderCircle, planetTxt, speciesTxt, nameTxt]);
         
-        if (isP1) this.p1Status = nameTxt;
-        else this.p2Status = nameTxt;
+        if (isP1) {
+            this.p1Status = nameTxt; 
+            this.p1ProfileCard = container; // Guardar referencia al contenedor completo
+        } else {
+            this.p2Status = nameTxt;
+            this.p2ProfileCard = container;
+        }
     }
 
     createAvatarFrames(p1X, p2X, y) {
@@ -334,6 +341,9 @@ export class GameScene extends Phaser.Scene {
             avatar.setScale(scale);
 
             container.add([bg, avatar]);
+            
+            if (isP1) this.p1AvatarFrame = container;
+            else this.p2AvatarFrame = container;
             
             // Animación de respiración para el cuadro del avatar
             this.tweens.add({
@@ -901,18 +911,74 @@ export class GameScene extends Phaser.Scene {
 
     switchSides() {
         if (this.isSwitchingSide) return;
-        this.isSwitchingSide = true; this.isPlayerRight = !this.isPlayerRight;
-        Storage.set('isPlayerRight', this.isPlayerRight); this.drawGrid();
-        const { width, height } = this.scale; this.updateMainMargins(width, height);
-        const CENTER_X = width / 2; const p1X = this.isPlayerRight ? width * 0.75 : width * 0.25; const p2X = this.isPlayerRight ? width * 0.25 : width * 0.75;
-        const p1EmojiX = this.isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5; const p2EmojiX = this.isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
-        this.p1Emoji.setFlipX(!this.isPlayerRight); this.p2Emoji.setFlipX(this.isPlayerRight);
-        this.tweens.add({ targets: [this.p1Status, this.p1Score], x: p1EmojiX, duration: 300, ease: 'Power2' });
-        this.tweens.add({ targets: [this.p2Status, this.p2Score], x: p2EmojiX, duration: 300, ease: 'Power2' });
-        this.tweens.add({ targets: [this.p1Emoji, this.p1X], x: p1EmojiX, angle: this.isPlayerRight ? -90 : 90, duration: 300, ease: 'Power2' });
-        this.tweens.add({ targets: [this.p2Emoji, this.p2X], x: p2EmojiX, angle: this.isPlayerRight ? 90 : -90, duration: 300, ease: 'Power2' });
-        this.p1ButtonsBg.forEach((btn, i) => { if(btn && btn.parentContainer) this.tweens.add({ targets: btn.parentContainer, x: p1X, duration: 300, ease: 'Back.easeOut' }); });
-        this.p2ButtonsBg.forEach((btn, i) => { if(btn && btn.parentContainer) this.tweens.add({ targets: btn.parentContainer, x: p2X, duration: 300, ease: 'Back.easeOut' }); });
+        this.isSwitchingSide = true; 
+        this.isPlayerRight = !this.isPlayerRight;
+        Storage.set('isPlayerRight', this.isPlayerRight); 
+        this.drawGrid();
+        
+        const { width, height } = this.scale; 
+        this.updateMainMargins(width, height);
+        
+        const CENTER_X = width / 2; 
+        // Coordenadas objetivo (Swap)
+        const p1TargetX = this.isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5; 
+        const p2TargetX = this.isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
+        
+        // Coordenadas botones
+        const p1BtnX = this.isPlayerRight ? width * 0.75 : width * 0.25; 
+        const p2BtnX = this.isPlayerRight ? width * 0.25 : width * 0.75;
+
+        // 1. Mover Tarjetas de Perfil (HUD)
+        this.tweens.add({ targets: [this.p1ProfileCard, this.p1Score], x: p1TargetX, duration: 300, ease: 'Power2' });
+        this.tweens.add({ targets: [this.p2ProfileCard, this.p2Score], x: p2TargetX, duration: 300, ease: 'Power2' });
+
+        // 2. Mover Marcos de Avatar
+        this.tweens.add({ targets: this.p1AvatarFrame, x: p1TargetX, duration: 300, ease: 'Power2' });
+        this.tweens.add({ targets: this.p2AvatarFrame, x: p2TargetX, duration: 300, ease: 'Power2' });
+
+        // 3. Mover Emojis de Combate (Flip y Posición)
+        // El flip se hace visualmente en el texto interno
+        this.p1Emoji.setFlipX(!this.isPlayerRight); 
+        this.p2Emoji.setFlipX(this.isPlayerRight);
+        
+        // Rotar contenedores para mantener lógica de "mirar al centro"
+        const angle1 = this.isPlayerRight ? -90 : 90;
+        const angle2 = this.isPlayerRight ? 90 : -90;
+
+        this.tweens.add({ 
+            targets: this.p1EmojiContainer, // Ahora movemos el contenedor, no el texto suelto
+            x: p1TargetX, 
+            angle: angle1, 
+            duration: 300, 
+            ease: 'Power2' 
+        });
+        
+        this.tweens.add({ 
+            targets: [this.p1X], // La X de error sí es texto suelto
+            x: p1TargetX, 
+            duration: 300, 
+            ease: 'Power2' 
+        });
+
+        this.tweens.add({ 
+            targets: this.p2EmojiContainer, 
+            x: p2TargetX, 
+            angle: angle2, 
+            duration: 300, 
+            ease: 'Power2' 
+        });
+
+        this.tweens.add({ 
+            targets: [this.p2X], 
+            x: p2TargetX, 
+            duration: 300, 
+            ease: 'Power2' 
+        });
+
+        // 4. Mover Botones de Acción
+        this.p1ButtonsBg.forEach((btn, i) => { if(btn && btn.parentContainer) this.tweens.add({ targets: btn.parentContainer, x: p1BtnX, duration: 300, ease: 'Back.easeOut' }); });
+        this.p2ButtonsBg.forEach((btn, i) => { if(btn && btn.parentContainer) this.tweens.add({ targets: btn.parentContainer, x: p2BtnX, duration: 300, ease: 'Back.easeOut' }); });
+        
         this.time.delayedCall(310, () => { this.isSwitchingSide = false; });
     }
 
