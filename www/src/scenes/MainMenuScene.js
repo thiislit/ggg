@@ -1,6 +1,8 @@
-import { Storage } from '../Storage.js';
-import { CONFIG } from '../config.js';
+import { Storage } from '../managers/Storage.js';
+import { CONFIG } from '../data/config.js';
 import { AudioManager } from '../managers/AudioManager.js';
+import { PlayerManager } from '../managers/PlayerManager.js';
+import { RetroButton } from '../ui/components/RetroButton.js';
 
 export class MainMenuScene extends Phaser.Scene {
     constructor() {
@@ -8,19 +10,17 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     async create() {
-        // Asegurar que el fondo espacial esté detrás
-        if (this.scene.get('BackgroundScene')) {
-            this.scene.sendToBack('BackgroundScene');
-        }
-        
-        // --- MUSICA DE FONDO GLOBAL ---
-        AudioManager.playMusic(this, 'bgm');
-
         const { width, height } = this.scale;
+
+        // Lanzar fondo (Estático)
+        this.scene.launch('BackgroundScene');
+        this.scene.sendToBack('BackgroundScene');
+
+        this.cameras.main.setBackgroundColor('rgba(0,0,0,0)'); // Transparente para ver el fondo
         
-        // Cargamos datos asíncronamente
-        const playerName = await Storage.get('playerName', 'PLAYER 1');
-        const bestStreak = await Storage.get('streak_best', 0);
+        // Cargamos datos desde PlayerManager
+        const playerName = PlayerManager.getName();
+        const bestStreak = PlayerManager.getBestStreak();
 
         // Título pequeño arriba
         this.playerText = this.add.text(width / 2, height * 0.15, `HELLO, ${playerName}`, {
@@ -32,8 +32,10 @@ export class MainMenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // --- BOTONES ---
-        // 1. INICIAR JUEGO
-        const startBtn = this.createButton(width / 2, height * 0.45, "START GAME", CONFIG.COLORS.P1_BLUE, () => {
+        this.menuButtons = [];
+
+        // 1. INICIAR JUEGO (Usando color del tema)
+        const startBtn = new RetroButton(this, width / 2, height * 0.40, "START GAME", CONFIG.THEME.PRIMARY, () => {
             this.tweens.add({
                 targets: this.cameras.main,
                 alpha: 0,
@@ -43,83 +45,86 @@ export class MainMenuScene extends Phaser.Scene {
                 }
             });
         });
+        this.menuButtons.push({ instance: startBtn, type: 'PRIMARY' });
 
-        // 2. OPCIONES
-        const optBtn = this.createButton(width / 2, height * 0.6, "OPTIONS", CONFIG.COLORS.TEXT_MUTED, () => {
+        // 2. EDITAR PERFIL
+        const profileBtn = new RetroButton(this, width / 2, height * 0.52, "EDIT PROFILE", CONFIG.THEME.ACCENT || 0x00FF00, () => {
+            this.scene.start('ProfileScene');
+        });
+        this.menuButtons.push({ instance: profileBtn, type: 'SECONDARY' });
+
+        // 3. OPCIONES
+        const optBtn = new RetroButton(this, width / 2, height * 0.64, "OPTIONS", CONFIG.THEME.SECONDARY, () => {
             this.scene.launch('SettingsScene'); 
         });
+        this.menuButtons.push({ instance: optBtn, type: 'SECONDARY' });
 
         // Escuchar cuando se cierran las opciones
-        this.scene.get('SettingsScene').events.on('settings-closed', async () => {
-            const newName = await Storage.get('playerName', 'PLAYER 1');
-            this.playerText.setText(`HELLO, ${newName}`).setFill(CONFIG.COLORS.TEXT_MAIN);
+        const settingsScene = this.scene.get('SettingsScene');
+        const onSettingsClosed = async () => {
+            // Seguridad: Si la escena ya no está activa, no hacer nada
+            if (!this.scene.isActive()) return;
+
+            const newName = PlayerManager.getName();
+            const c = CONFIG.THEME;
+
+            if (this.playerText && this.playerText.active && this.playerText.scene) {
+                this.playerText.setText(`HELLO, ${newName}`).setFill(c.PRIMARY_STR);
+            }
+
+            // Actualizar colores de botones (Usando el nuevo componente)
+            this.menuButtons.forEach(btnObj => {
+                if (btnObj.instance && btnObj.instance.scene) {
+                    const color = (btnObj.type === 'PRIMARY') ? c.PRIMARY : c.SECONDARY;
+                    btnObj.instance.setColor(color);
+                }
+            });
+
+            // Actualizar récord
+            if (this.recordText && this.recordText.active && this.recordText.scene) {
+                this.recordText.setFill(c.PRIMARY_STR);
+            }
+            if (this.recordBg && this.recordBg.active && this.recordBg.clear) {
+                this.recordBg.clear();
+                this.recordBg.fillStyle(0x000000, 0.7);
+                this.recordBg.fillRoundedRect(-150, -25, 300, 50, CONFIG.UI.BUTTON_RADIUS);
+                this.recordBg.lineStyle(2, c.PRIMARY);
+                this.recordBg.strokeRoundedRect(-150, -25, 300, 50, CONFIG.UI.BUTTON_RADIUS);
+            }
+
+            if (this.versionText && this.versionText.active && this.versionText.scene) {
+                this.versionText.setFill(c.SECONDARY_STR);
+            }
+        };
+
+        settingsScene.events.on('settings-closed', onSettingsClosed);
+        
+        // Limpiar el evento cuando la escena se destruye o cambia
+        this.events.once('shutdown', () => {
+            settingsScene.events.off('settings-closed', onSettingsClosed);
         });
 
         // --- MOSTRAR MEJOR RACHA ---
         this.recordText = this.add.text(0, 0, `RECORD: ${bestStreak} WINS`, {
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: '16px', fill: CONFIG.COLORS.TEXT_MAIN
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: '16px', fill: CONFIG.THEME.PRIMARY_STR
         }).setOrigin(0.5);
 
         const recordContainer = this.add.container(width / 2, height * 0.85);
-        const recordBg = this.add.graphics();
-        recordBg.fillStyle(0x000000, 0.7);
-        recordBg.fillRoundedRect(-150, -25, 300, 50, CONFIG.UI.BUTTON_RADIUS);
-        recordBg.lineStyle(2, CONFIG.COLORS.P1_BLUE);
-        recordBg.strokeRoundedRect(-150, -25, 300, 50, CONFIG.UI.BUTTON_RADIUS);
+        this.recordBg = this.add.graphics();
+        this.recordBg.fillStyle(0x000000, 0.7);
+        this.recordBg.fillRoundedRect(-150, -25, 300, 50, CONFIG.UI.BUTTON_RADIUS);
+        this.recordBg.lineStyle(2, CONFIG.THEME.PRIMARY);
+        this.recordBg.strokeRoundedRect(-150, -25, 300, 50, CONFIG.UI.BUTTON_RADIUS);
         
-        recordContainer.add([recordBg, this.recordText]);
+        recordContainer.add([this.recordBg, this.recordText]);
 
         // --- VERSIÓN ---
-        this.add.text(width - 20, height - 20, "v1.0", {
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.SMALL, fill: CONFIG.COLORS.TEXT_MUTED
+        this.versionText = this.add.text(width - 20, height - 20, "v1.0", {
+            fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.SMALL, fill: CONFIG.THEME.secondaryStr
         }).setOrigin(1, 1);
 
         // Efecto de entrada suave
         this.cameras.main.alpha = 0;
         this.tweens.add({ targets: this.cameras.main, alpha: 1, duration: CONFIG.TIMING.FADE_DURATION });
-    }
-
-    createButton(x, y, text, color, callback) {
-        const container = this.add.container(x, y);
-        
-        // Usamos Graphics para bordes redondeados
-        const bg = this.add.graphics();
-        bg.fillStyle(color, 1);
-        bg.fillRoundedRect(-180, -40, 360, 80, CONFIG.UI.BUTTON_RADIUS); 
-        bg.lineStyle(4, 0xffffff);
-        bg.strokeRoundedRect(-180, -40, 360, 80, CONFIG.UI.BUTTON_RADIUS);
-        
-        // Área interactiva
-        bg.setInteractive(new Phaser.Geom.Rectangle(-180, -40, 360, 80), Phaser.Geom.Rectangle.Contains);
-        
-        // --- EFECTO DE HALO EXTERNO (GLOW) ---
-        const glowBg = this.add.graphics();
-        glowBg.fillStyle(0xffffff, 0.4); 
-        glowBg.fillRoundedRect(-190, -50, 380, 100, 20); 
-        glowBg.alpha = 0; 
-
-        this.tweens.add({
-            targets: glowBg,
-            alpha: 0.8, 
-            duration: 800,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
-
-        const txt = this.add.text(0, 0, text, {
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.LARGE, fill: CONFIG.COLORS.TEXT_DARK
-        }).setOrigin(0.5);
-
-        container.add([glowBg, bg, txt]);
-
-        bg.on('pointerdown', () => {
-            this.tweens.add({ targets: container, scale: 0.95, duration: CONFIG.TIMING.BUTTON_BOUNCE, yoyo: true });
-            AudioManager.playSFX(this, 'sfx_button');
-            if (navigator.vibrate) navigator.vibrate(50);
-            this.time.delayedCall(150, callback);
-        });
-
-        return container;
     }
 }

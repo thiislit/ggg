@@ -4,6 +4,7 @@ import { GameScene } from './scenes/GameScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { SettingsScene } from './scenes/SettingsScene.js';
 import { BackgroundScene } from './scenes/BackgroundScene.js';
+import { ProfileScene } from './scenes/ProfileScene.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -16,7 +17,7 @@ const config = {
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
     // El orden importa: SplashScene arranca primero y ella lanza el background
-    scene: [SplashScene, BackgroundScene, MainMenuScene, GameScene, GameOverScene, SettingsScene]
+    scene: [SplashScene, BackgroundScene, ProfileScene, MainMenuScene, GameScene, GameOverScene, SettingsScene]
 };
 
 const game = new Phaser.Game(config);
@@ -46,6 +47,13 @@ if (window.Capacitor) {
                 // En el menú principal, salimos de la app
                 App.exitApp();
             } 
+            else if (key === 'ProfileScene') {
+                // Si viene del Splash, al dar atrás salimos. 
+                // Si viene del Menú (Editar), vuelve al menú.
+                // Como usamos start(), no sabemos el origen fácilmente sin flags.
+                // Por defecto, volvemos al menú para no cerrar la app por error.
+                currentScene.scene.start('MainMenuScene');
+            }
             else if (key === 'SettingsScene') {
                 // En opciones, cerramos la escena (simula el botón volver)
                 currentScene.events.emit('settings-closed');

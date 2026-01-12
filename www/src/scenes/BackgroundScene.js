@@ -1,30 +1,34 @@
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../data/config.js';
+import { Storage } from '../managers/Storage.js';
 
 export class BackgroundScene extends Phaser.Scene {
     constructor() {
         super('BackgroundScene');
     }
 
-    create() {
+    async create() {
         const width = this.scale.width;
         const height = this.scale.height;
         
+        // Leer el tema guardado
+        const savedTheme = await Storage.get('bg_theme', 'bg_purple');
+
         this.cameras.main.setScroll(0, 0);
         this.cameras.main.setBackgroundColor(CONFIG.COLORS.BG_DARK);
         
         // --- MODO IMAGEN ESTÁTICA ---
-        // Centramos la imagen para que el "palpitar" sea simétrico
-        this.bgStatic = this.add.image(width / 2, height / 2, 'v3_bg');
-        
-        // Aplicamos un tinte verdoso muy sutil para efecto terminal
-        this.bgStatic.setTint(0x88ff88);
+        this.bgStatic = this.add.image(width / 2, height / 2, savedTheme);
         
         // Forzamos el tamaño inicial para llenar la pantalla
         this.bgStatic.setDisplaySize(width, height);
         this.bgStatic.setDepth(-100);
 
-        // --- ANIMACIÓN DE PALPITAR (EFECTO RESPIRACIÓN) ---
-        // 1. Escala: Crece un 4% de forma más fluida
+        // Si es el verde original, aplicamos el tinte para mantener el estilo
+        if (savedTheme === 'bg_green') {
+            this.bgStatic.setTint(0x88ff88);
+        }
+
+        // --- ANIMACIÓN DE PALPITAR ---
         this.tweens.add({
             targets: this.bgStatic,
             scale: this.bgStatic.scale * 1.04,
@@ -34,7 +38,6 @@ export class BackgroundScene extends Phaser.Scene {
             ease: 'Sine.easeInOut'
         });
 
-        // 2. Brillo: Ciclo más corto para dar vida
         this.tweens.add({
             targets: this.bgStatic,
             alpha: 0.85,
@@ -43,39 +46,21 @@ export class BackgroundScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
+    }
 
-        /* 
-        // --- MODO ANIMADO (COMENTADO PARA RESPALDO) ---
-        // Evitar error de textura duplicada al reiniciar la escena
-        if (this.textures.exists('spaceBackground')) {
-            this.textures.remove('spaceBackground');
+    /**
+     * Cambia el fondo en tiempo real desde SettingsScene
+     */
+    changeBackground(textureKey) {
+        if (this.bgStatic) {
+            this.bgStatic.setTexture(textureKey);
+            // Re-aplicar tinte solo si es el verde
+            if (textureKey === 'bg_green') {
+                this.bgStatic.setTint(0x88ff88);
+            } else {
+                this.bgStatic.clearTint();
+            }
         }
-
-        // Crear una textura dinámica basada en Canvas
-        this.canvasTexture = this.textures.createCanvas('spaceBackground', width, height);
-        this.ctx = this.canvasTexture.getContext();
-        
-        // Inicializar nuestros sistemas (copiado y adaptado del Lab)
-        this.particles = [];
-        this.planets = [];
-        this.nebula = [];
-        
-        // 1. Fondo Estático (Lo pintamos una vez en un canvas separado en memoria)
-        this.staticBg = document.createElement('canvas');
-        this.staticBg.width = width;
-        this.staticBg.height = height;
-        const staticCtx = this.staticBg.getContext('2d');
-        this.createStaticStarfield(staticCtx, width, height);
-
-        // 2. Crear elementos dinámicos
-        this.createNebula(width, height);
-        this.createPlanets(width, height);
-        this.createParticles(width, height);
-
-        // Añadir la imagen al mundo (es lo que se verá)
-        this.bgImage = this.add.image(0, 0, 'spaceBackground').setOrigin(0);
-        this.bgImage.setDepth(-100); 
-        */
     }
 
     update(time, delta) {

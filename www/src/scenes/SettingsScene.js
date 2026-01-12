@@ -1,5 +1,6 @@
-import { Storage } from '../Storage.js';
+import { Storage } from '../managers/Storage.js';
 import { AudioManager } from '../managers/AudioManager.js';
+import { CONFIG } from '../data/config.js';
 
 export class SettingsScene extends Phaser.Scene {
     constructor() {
@@ -8,316 +9,331 @@ export class SettingsScene extends Phaser.Scene {
 
     async create() {
         const { width, height } = this.scale;
-        
-        // Siempre usamos tema oscuro/neon
-        this.themes = {
-            dark: { background: 0x000000, text: '#ffffff', accent: '#00A8F3' }
-        };
-        const colors = this.themes.dark;
+        const colors = CONFIG.THEME;
 
         // 1. Fondo bloqueador
-        this.bg = this.add.rectangle(0, 0, width, height, colors.background, 0.95)
+        this.bg = this.add.rectangle(0, 0, width, height, colors.BG, 0.95)
             .setOrigin(0)
             .setInteractive();
         this.bg.on('pointerdown', (pointer, localX, localY, event) => event.stopPropagation());
+        this.bg.on('pointerup', (pointer, localX, localY, event) => event.stopPropagation());
 
         // 2. Título
-        this.title = this.add.text(width / 2, height * 0.12, "OPTIONS", {
-            fontFamily: '"Press Start 2P"', fontSize: '28px', fill: colors.text
+        this.title = this.add.text(width / 2, height * 0.10, "OPTIONS", {
+            fontFamily: '"Press Start 2P"', fontSize: '28px', fill: colors.PRIMARY_STR
         }).setOrigin(0.5);
 
-        // 3. Volumen de MÚSICA
-        this.musicLabel = this.add.text(width / 2, height * 0.22, "MUSIC VOLUME", {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.text
+        // --- SLIDERS DE VOLUMEN ---
+        const sliderX = width / 2;
+        const trackW = 240;
+
+        // Música
+        this.musicLabel = this.add.text(sliderX, height * 0.20, "MUSIC VOLUME", {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.PRIMARY_STR
         }).setOrigin(0.5);
 
-        const musicTrack = this.add.rectangle(width / 2, height * 0.28, 200, 10, 0x555555).setOrigin(0.5);
-        const musicHandleX = (width / 2 - 100) + (AudioManager.volumes.music * 200);
-        this.musicHandle = this.add.circle(musicHandleX, height * 0.28, 15, 0x00A8F3)
+        const musicTrack = this.add.rectangle(sliderX, height * 0.25, trackW, 10, 0x444444).setOrigin(0.5);
+        const musicHandleX = (sliderX - trackW/2) + (AudioManager.volumes.music * trackW);
+        this.musicHandle = this.add.circle(musicHandleX, height * 0.25, 15, colors.PRIMARY)
             .setInteractive({ draggable: true, useHandCursor: true });
 
         this.musicHandle.on('drag', (pointer, dragX) => {
-            const minX = width / 2 - 100;
-            const maxX = width / 2 + 100;
+            const minX = sliderX - trackW/2;
+            const maxX = sliderX + trackW/2;
             const clampedX = Phaser.Math.Clamp(dragX, minX, maxX);
             this.musicHandle.x = clampedX;
-            const vol = (clampedX - minX) / 200;
-            AudioManager.setMusicVolume(vol);
+            AudioManager.setMusicVolume((clampedX - minX) / trackW);
         });
 
-        // 3b. Volumen de SFX
-        this.sfxLabel = this.add.text(width / 2, height * 0.35, "SFX VOLUME", {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.text
+        // SFX
+        this.sfxLabel = this.add.text(sliderX, height * 0.32, "SFX VOLUME", {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.PRIMARY_STR
         }).setOrigin(0.5);
 
-        const sfxTrack = this.add.rectangle(width / 2, height * 0.41, 200, 10, 0x555555).setOrigin(0.5);
-        const sfxHandleX = (width / 2 - 100) + (AudioManager.volumes.sfx * 200);
-        this.sfxHandle = this.add.circle(sfxHandleX, height * 0.41, 15, 0x00A8F3)
+        const sfxTrack = this.add.rectangle(sliderX, height * 0.37, trackW, 10, 0x444444).setOrigin(0.5);
+        const sfxHandleX = (sliderX - trackW/2) + (AudioManager.volumes.sfx * trackW);
+        this.sfxHandle = this.add.circle(sfxHandleX, height * 0.37, 15, colors.PRIMARY)
             .setInteractive({ draggable: true, useHandCursor: true });
 
         this.sfxHandle.on('drag', (pointer, dragX) => {
-            const minX = width / 2 - 100;
-            const maxX = width / 2 + 100;
+            const minX = sliderX - trackW/2;
+            const maxX = sliderX + trackW/2;
             const clampedX = Phaser.Math.Clamp(dragX, minX, maxX);
             this.sfxHandle.x = clampedX;
-            const vol = (clampedX - minX) / 200;
-            AudioManager.setSfxVolume(vol);
+            AudioManager.setSfxVolume((clampedX - minX) / trackW);
         });
 
-        // 4. Vibración (SWITCH VISUAL B&N)
-        const savedVib = await Storage.get('vibrate', 'true');
-        this.vibrateEnabled = (savedVib !== 'false');
+        // --- FILAS DE CONFIGURACIÓN ---
+        const startY = height * 0.45; // Subido un poco para que quepa MUTE
+        const rowStep = height * 0.075; // Un poco más compacto
+        const labelX = -140;
+        const valueX = 60;
 
-        const vibRow = this.add.container(width / 2, height * 0.52);
-        this.vibLabel = this.add.text(-100, 0, "VIBRATION", {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
-        }).setOrigin(0, 0.5);
+        // Referencias para refresh
+        this.arrows = [];
 
-        // Contenedor del Switch
-        const switchW = 80;
-        const switchH = 30;
-        const switchX = 50; 
+        // 4. Mute (NUEVO)
+        this.muteEnabled = this.sound.mute;
+        const muteRow = this.add.container(width / 2, startY);
+        this.muteLabel = this.add.text(labelX, 0, "MUTE GAME", { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.PRIMARY_STR }).setOrigin(0, 0.5);
         
-        // Fondo dinámico (Graphics)
-        const switchBg = this.add.graphics();
-        
-        // Textos ON/OFF internos
-        const offText = this.add.text(switchX + 15, 0, "OFF", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff' }).setOrigin(0.5);
-        const onText = this.add.text(switchX + 65, 0, "ON", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff' }).setOrigin(0.5);
+        const muteSwitchBg = this.add.graphics();
+        const mOffTxt = this.add.text(valueX + 15, 0, "OFF", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: colors.ACCENT_STR }).setOrigin(0.5);
+        const mOnTxt = this.add.text(valueX + 65, 0, "ON", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: colors.ACCENT_STR }).setOrigin(0.5);
+        const mHandle = this.add.circle(this.muteEnabled ? valueX + 65 : valueX + 15, 0, 14, colors.ACCENT);
 
-        const handle = this.add.circle(this.vibrateEnabled ? switchX + 65 : switchX + 15, 0, 14, 0xffffff); // Handle siempre blanco pero cambiante de color si fondo es blanco? No, handle blanco, fondo cambia.
-        
-        // Mejor: Handle NEGRO si el fondo es BLANCO, Handle BLANCO si el fondo es NEGRO.
-        // O Handle siempre BLANCO y fondo NEGRO (OFF) -> BLANCO (ON)
-
-        const drawSwitch = (enabled) => {
-            switchBg.clear();
+        const drawMute = (enabled) => {
+            muteSwitchBg.clear();
+            muteSwitchBg.lineStyle(2, colors.ACCENT);
+            muteSwitchBg.strokeRoundedRect(valueX, -15, 80, 30, 15);
             if (enabled) {
-                // Estado ON: Fondo Blanco, Borde Blanco
-                switchBg.fillStyle(0xffffff, 1);
-                switchBg.fillRoundedRect(switchX, -15, switchW, switchH, 15);
-                
-                // Textos invierten color para verse sobre blanco
-                offText.setFill('#000000');
-                onText.setFill('#000000'); // Tapado por handle de todas formas
-                handle.setFillStyle(0x000000); // Handle Negro sobre fondo blanco
+                muteSwitchBg.fillStyle(colors.ACCENT, 1);
+                muteSwitchBg.fillRoundedRect(valueX, -15, 80, 30, 15);
+                mHandle.setFillStyle(colors.PRIMARY);
+                mOffTxt.setFill(colors.TEXT_DARK); mOnTxt.setFill(colors.TEXT_DARK);
             } else {
-                // Estado OFF: Fondo Negro, Borde Blanco
-                switchBg.lineStyle(2, 0xffffff);
-                switchBg.strokeRoundedRect(switchX, -15, switchW, switchH, 15);
-                switchBg.fillStyle(0x000000, 1);
-                switchBg.fillRoundedRect(switchX, -15, switchW, switchH, 15);
-
-                // Textos blancos sobre fondo negro
-                offText.setFill('#ffffff');
-                onText.setFill('#ffffff');
-                handle.setFillStyle(0xffffff); // Handle Blanco sobre fondo negro
+                muteSwitchBg.fillStyle(0x000000, 1);
+                muteSwitchBg.fillRoundedRect(valueX, -15, 80, 30, 15);
+                mHandle.setFillStyle(colors.ACCENT);
+                mOffTxt.setFill(colors.ACCENT_STR); mOnTxt.setFill(colors.ACCENT_STR);
             }
         };
+        drawMute(this.muteEnabled);
 
-        drawSwitch(this.vibrateEnabled);
-
-        const toggleArea = this.add.rectangle(switchX + 40, 0, switchW, switchH, 0x000000, 0)
-            .setInteractive({ useHandCursor: true });
-
-        const updateSwitch = (enabled) => {
-            this.tweens.add({
-                targets: handle,
-                x: enabled ? switchX + 65 : switchX + 15,
-                duration: 200,
-                ease: 'Power2',
-                onStart: () => drawSwitch(enabled) // Redibujar colores al iniciar cambio
-            });
-        };
-
-        toggleArea.on('pointerdown', () => {
+        const mArea = this.add.rectangle(valueX + 40, 0, 80, 30, 0, 0).setInteractive({ useHandCursor: true });
+        mArea.on('pointerup', (pointer, localX, localY, event) => {
+            if (event) event.stopPropagation();
+            this.muteEnabled = !this.muteEnabled;
+            this.sound.mute = this.muteEnabled;
+            Storage.set('isMuted', this.muteEnabled);
             AudioManager.playSFX(this, 'sfx_button');
+            
+            // Animación inmediata
+            this.tweens.killTweensOf(mHandle);
+            this.tweens.add({ 
+                targets: mHandle, 
+                x: this.muteEnabled ? valueX + 65 : valueX + 15, 
+                duration: 150, 
+                onStart: () => drawMute(this.muteEnabled)
+            });
+        });
+        muteRow.add([this.muteLabel, muteSwitchBg, mOffTxt, mOnTxt, mHandle, mArea]);
+
+        // 5. Vibración
+        this.vibrateEnabled = await Storage.get('vibrate', true);
+        const vibRow = this.add.container(width / 2, startY + rowStep);
+        this.vibLabel = this.add.text(labelX, 0, "VIBRATION", { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.PRIMARY_STR }).setOrigin(0, 0.5);
+        
+        const switchBg = this.add.graphics();
+        const offTxt = this.add.text(valueX + 15, 0, "OFF", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: colors.ACCENT_STR }).setOrigin(0.5);
+        const onTxt = this.add.text(valueX + 65, 0, "ON", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: colors.ACCENT_STR }).setOrigin(0.5);
+        const vHandle = this.add.circle(this.vibrateEnabled ? valueX + 65 : valueX + 15, 0, 14, colors.ACCENT);
+
+        const drawVib = (enabled) => {
+            switchBg.clear();
+            switchBg.lineStyle(2, colors.ACCENT);
+            switchBg.strokeRoundedRect(valueX, -15, 80, 30, 15);
+            if (enabled) {
+                switchBg.fillStyle(colors.ACCENT, 1);
+                switchBg.fillRoundedRect(valueX, -15, 80, 30, 15);
+                vHandle.setFillStyle(colors.PRIMARY);
+                offTxt.setFill(colors.TEXT_DARK); onTxt.setFill(colors.TEXT_DARK);
+            } else {
+                switchBg.fillStyle(0x000000, 1);
+                switchBg.fillRoundedRect(valueX, -15, 80, 30, 15);
+                vHandle.setFillStyle(colors.ACCENT);
+                offTxt.setFill(colors.ACCENT_STR); onTxt.setFill(colors.ACCENT_STR);
+            }
+        };
+        drawVib(this.vibrateEnabled);
+
+        const vArea = this.add.rectangle(valueX + 40, 0, 80, 30, 0, 0).setInteractive({ useHandCursor: true });
+        vArea.on('pointerup', (pointer, localX, localY, event) => {
+            if (event) event.stopPropagation();
             this.vibrateEnabled = !this.vibrateEnabled;
             Storage.set('vibrate', this.vibrateEnabled);
-            updateSwitch(this.vibrateEnabled);
+            AudioManager.playSFX(this, 'sfx_button');
+            
+            this.tweens.killTweensOf(vHandle);
+            this.tweens.add({ 
+                targets: vHandle, 
+                x: this.vibrateEnabled ? valueX + 65 : valueX + 15, 
+                duration: 150, 
+                onStart: () => drawVib(this.vibrateEnabled) 
+            });
             if (this.vibrateEnabled && navigator.vibrate) navigator.vibrate(50);
         });
+        vibRow.add([this.vibLabel, switchBg, offTxt, onTxt, vHandle, vArea]);
 
-        vibRow.add([this.vibLabel, switchBg, offText, onText, handle, toggleArea]);
+        // 6. BG Dim
+        let bgDim = await Storage.get('bgDim', false);
+        const bgRow = this.add.container(width / 2, startY + rowStep * 2);
+        this.bgLabel = this.add.text(labelX, 0, "BG DIM", { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.PRIMARY_STR }).setOrigin(0, 0.5);
+        const dimBg = this.add.graphics();
+        const dOff = this.add.text(valueX + 15, 0, "OFF", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: colors.ACCENT_STR }).setOrigin(0.5);
+        const dOn = this.add.text(valueX + 65, 0, "ON", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: colors.ACCENT_STR }).setOrigin(0.5);
+        const dHandle = this.add.circle(bgDim ? valueX + 65 : valueX + 15, 0, 14, colors.ACCENT);
 
-        // 5. Fondo (SWITCH VISUAL B&N)
-        let bgDim = await Storage.get('bgDim', 'false') === 'true';
-        
-        const bgRow = this.add.container(width / 2, height * 0.62);
-        this.bgLabel = this.add.text(-100, 0, "BG IN GAME", {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
-        }).setOrigin(0, 0.5);
-
-        // Contenedor del Switch
-        const bgSwitchX = 50; 
-        const bgSwitchBg = this.add.graphics();
-        const bgOffText = this.add.text(bgSwitchX + 15, 0, "OFF", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff' }).setOrigin(0.5);
-        const bgOnText = this.add.text(bgSwitchX + 65, 0, "ON", { fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#ffffff' }).setOrigin(0.5);
-        const bgHandle = this.add.circle(bgDim ? bgSwitchX + 65 : bgSwitchX + 15, 0, 14, 0xffffff);
-
-        const drawBgSwitch = (enabled) => {
-            bgSwitchBg.clear();
+        const drawDim = (enabled) => {
+            dimBg.clear();
+            dimBg.lineStyle(2, colors.ACCENT);
+            dimBg.strokeRoundedRect(valueX, -15, 80, 30, 15);
             if (enabled) {
-                bgSwitchBg.fillStyle(0xffffff, 1);
-                bgSwitchBg.fillRoundedRect(bgSwitchX, -15, 80, 30, 15);
-                bgOffText.setFill('#000000');
-                bgOnText.setFill('#000000');
-                bgHandle.setFillStyle(0x000000);
+                dimBg.fillStyle(colors.ACCENT, 1);
+                dimBg.fillRoundedRect(valueX, -15, 80, 30, 15);
+                dHandle.setFillStyle(colors.PRIMARY);
+                dOff.setFill(colors.TEXT_DARK); dOn.setFill(colors.TEXT_DARK);
             } else {
-                bgSwitchBg.lineStyle(2, 0xffffff);
-                bgSwitchBg.strokeRoundedRect(bgSwitchX, -15, 80, 30, 15);
-                bgSwitchBg.fillStyle(0x000000, 1);
-                bgSwitchBg.fillRoundedRect(bgSwitchX, -15, 80, 30, 15);
-                bgOffText.setFill('#ffffff');
-                bgOnText.setFill('#ffffff');
-                bgHandle.setFillStyle(0xffffff);
+                dimBg.fillStyle(0x000000, 1);
+                dimBg.fillRoundedRect(valueX, -15, 80, 30, 15);
+                dHandle.setFillStyle(colors.ACCENT);
+                dOff.setFill(colors.ACCENT_STR); dOn.setFill(colors.ACCENT_STR);
             }
         };
+        drawDim(bgDim);
 
-        drawBgSwitch(bgDim);
-
-        const bgToggleArea = this.add.rectangle(bgSwitchX + 40, 0, 80, 30, 0x000000, 0)
-            .setInteractive({ useHandCursor: true });
-
-        const updateBgSwitch = (enabled) => {
-            this.tweens.add({
-                targets: bgHandle,
-                x: enabled ? bgSwitchX + 65 : bgSwitchX + 15,
-                duration: 200,
-                ease: 'Power2',
-                onStart: () => drawBgSwitch(enabled)
-            });
-        };
-
-        bgToggleArea.on('pointerdown', () => {
-            AudioManager.playSFX(this, 'sfx_button');
+        const dArea = this.add.rectangle(valueX + 40, 0, 80, 30, 0, 0).setInteractive({ useHandCursor: true });
+        dArea.on('pointerup', (pointer, localX, localY, event) => {
+            if (event) event.stopPropagation();
             bgDim = !bgDim;
             Storage.set('bgDim', bgDim);
-            updateBgSwitch(bgDim);
-            if (this.vibrateEnabled && navigator.vibrate) navigator.vibrate(20);
+            AudioManager.playSFX(this, 'sfx_button');
+            
+            this.tweens.killTweensOf(dHandle);
+            this.tweens.add({ 
+                targets: dHandle, 
+                x: bgDim ? valueX + 65 : valueX + 15, 
+                duration: 150, 
+                onStart: () => drawDim(bgDim) 
+            });
         });
+        bgRow.add([this.bgLabel, dimBg, dOff, dOn, dHandle, dArea]);
 
-        bgRow.add([this.bgLabel, bgSwitchBg, bgOffText, bgOnText, bgHandle, bgToggleArea]);
+        // 7. BG Theme
+        const bgThemes = [
+            { id: 'bg_green', name: 'GREEN' },
+            { id: 'bg_purple', name: 'PURPLE' },
+            { id: 'bg_blue', name: 'BLUE' }
+        ];
+        let currentBgId = await Storage.get('bg_theme', 'bg_purple');
+        let bgIdx = bgThemes.findIndex(t => t.id === currentBgId);
+        if (bgIdx === -1) bgIdx = 1;
 
-        // 6. DIFICULTAD (SELECTOR CON FLECHAS)
+        const themeRow = this.add.container(width / 2, startY + rowStep * 3);
+        this.themeLabel = this.add.text(labelX, 0, "BG THEME", { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.PRIMARY_STR }).setOrigin(0, 0.5);
+        this.themeValue = this.add.text(valueX + 40, 0, bgThemes[bgIdx].name, { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.PRIMARY_STR }).setOrigin(0.5);
+        const tL = this.add.text(valueX - 10, 0, "<", { fontFamily: '"Press Start 2P"', fontSize: '20px', fill: colors.ACCENT_STR }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const tR = this.add.text(valueX + 90, 0, ">", { fontFamily: '"Press Start 2P"', fontSize: '20px', fill: colors.ACCENT_STR }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.arrows.push(tL, tR);
+
+        const updateTheme = (dir) => {
+            bgIdx = (bgIdx + dir + bgThemes.length) % bgThemes.length;
+            const theme = bgThemes[bgIdx];
+            Storage.set('bg_theme', theme.id);
+            CONFIG.THEME.setFromPalette(theme.id);
+            this.themeValue.setText(theme.name);
+            const bgScene = this.scene.get('BackgroundScene');
+            if (bgScene && bgScene.changeBackground) bgScene.changeBackground(theme.id);
+            this.refreshUIColors();
+            this.tweens.add({ targets: this.themeValue, scale: { from: 1.2, to: 1 }, duration: 200 });
+        };
+        tL.on('pointerdown', (pointer, localX, localY, event) => { 
+            if (event) event.stopPropagation();
+            AudioManager.playSFX(this, 'sfx_button'); 
+            updateTheme(-1); 
+        });
+        tR.on('pointerdown', (pointer, localX, localY, event) => { 
+            if (event) event.stopPropagation();
+            AudioManager.playSFX(this, 'sfx_button'); 
+            updateTheme(1); 
+        });
+        themeRow.add([this.themeLabel, tL, this.themeValue, tR]);
+
+        // 7. Difficulty
         this.difficulties = ['EASY', 'MEDIUM', 'HARD'];
         let savedDiff = await Storage.get('difficulty', 'MEDIUM');
-        this.diffIndex = this.difficulties.indexOf(savedDiff);
-        if (this.diffIndex === -1) this.diffIndex = 1;
+        this.diffIdx = this.difficulties.indexOf(savedDiff);
+        if (this.diffIdx === -1) this.diffIdx = 1;
 
-        const diffRow = this.add.container(width / 2, height * 0.74);
-        
-        // Etiqueta (Más a la izquierda)
-        const diffLabel = this.add.text(-120, 0, "DIFFICULTY", {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.text
-        }).setOrigin(0, 0.5);
+        const diffRow = this.add.container(width / 2, startY + rowStep * 4);
+        this.diffLabel = this.add.text(labelX, 0, "DIFFICULTY", { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: colors.PRIMARY_STR }).setOrigin(0, 0.5);
+        this.diffValue = this.add.text(valueX + 40, 0, this.difficulties[this.diffIdx], { fontFamily: '"Press Start 2P"', fontSize: '14px', fill: this.getDiffColor(this.difficulties[this.diffIdx]) }).setOrigin(0.5);
+        const dL = this.add.text(valueX - 10, 0, "<", { fontFamily: '"Press Start 2P"', fontSize: '20px', fill: colors.ACCENT_STR }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const dR = this.add.text(valueX + 90, 0, ">", { fontFamily: '"Press Start 2P"', fontSize: '20px', fill: colors.ACCENT_STR }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.arrows.push(dL, dR);
 
-        // Valor Central (Desplazado para no chocar)
-        const diffValue = this.add.text(100, 0, this.difficulties[this.diffIndex], {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: this.getDiffColor(this.difficulties[this.diffIndex])
-        }).setOrigin(0.5);
-
-        // Flecha Izquierda
-        const leftArrow = this.add.text(40, 0, "<", {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', fill: '#ffffff'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        // Flecha Derecha
-        const rightArrow = this.add.text(160, 0, ">", {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', fill: '#ffffff'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        const updateDifficulty = (direction) => {
-            // Ciclo circular: +1 o -1
-            if (direction === 1) {
-                this.diffIndex = (this.diffIndex + 1) % this.difficulties.length;
-            } else {
-                this.diffIndex = (this.diffIndex - 1 + this.difficulties.length) % this.difficulties.length;
-            }
-
-            const newDiff = this.difficulties[this.diffIndex];
-            Storage.set('difficulty', newDiff);
-            
-            diffValue.setText(newDiff);
-            diffValue.setFill(this.getDiffColor(newDiff));
-            
-            // Animación de pulso
-            this.tweens.add({ targets: diffValue, scale: { from: 1.2, to: 1 }, duration: 200 });
-            if (this.vibrateEnabled && navigator.vibrate) navigator.vibrate(20);
+        const updateDiff = (dir) => {
+            this.diffIdx = (this.diffIdx + dir + this.difficulties.length) % this.difficulties.length;
+            const d = this.difficulties[this.diffIdx];
+            Storage.set('difficulty', d);
+            this.diffValue.setText(d).setFill(this.getDiffColor(d));
+            this.tweens.add({ targets: this.diffValue, scale: { from: 1.2, to: 1 }, duration: 200 });
         };
-
-        leftArrow.on('pointerdown', () => {
-            AudioManager.playSFX(this, 'sfx_button');
-            this.tweens.add({ targets: leftArrow, scale: 0.8, duration: 50, yoyo: true });
-            updateDifficulty(-1);
+        dL.on('pointerdown', (pointer, localX, localY, event) => { 
+            if (event) event.stopPropagation();
+            AudioManager.playSFX(this, 'sfx_button'); 
+            updateDiff(-1); 
         });
-
-        rightArrow.on('pointerdown', () => {
-            AudioManager.playSFX(this, 'sfx_button');
-            this.tweens.add({ targets: rightArrow, scale: 0.8, duration: 50, yoyo: true });
-            updateDifficulty(1);
+        dR.on('pointerdown', (pointer, localX, localY, event) => { 
+            if (event) event.stopPropagation();
+            AudioManager.playSFX(this, 'sfx_button'); 
+            updateDiff(1); 
         });
-        
-        // Añadir a la fila pero guardar referencias para poder actualizar colores si hiciera falta
-        this.diffValueText = diffValue; 
-        diffRow.add([diffLabel, leftArrow, diffValue, rightArrow]);
+        diffRow.add([this.diffLabel, dL, this.diffValue, dR]);
 
-        // 7. Botón Volver
-        this.closeBtn = this.add.text(width / 2, height * 0.90, "BACK", {
-            fontFamily: '"Press Start 2P"', fontSize: '18px', fill: colors.accent
+        // 8. Botón BACK
+        this.closeBtn = this.add.text(width / 2, height * 0.88, "BACK", {
+            fontFamily: '"Press Start 2P"', fontSize: '18px', fill: colors.PRIMARY_STR
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        this.closeBtn.on('pointerdown', () => {
+        
+        this.closeBtn.on('pointerdown', (pointer, localX, localY, event) => {
+            if (event) event.stopPropagation();
             AudioManager.playSFX(this, 'sfx_button');
-            // this.sound.play('sfx_reveal', { volume: 0.5, detune: 500 });
             this.events.emit('settings-closed');
             this.scene.stop();
         });
 
-        // 8. Privacidad
-        this.privacyBtn = this.add.text(width / 2, height * 0.82, "PRIVACY", {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: colors.text
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        // 9. Footer
+        this.add.text(60, height - 30, "PRIVACY", { fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#666' })
+            .setOrigin(0, 1).setInteractive({ useHandCursor: true }).on('pointerdown', (pointer, localX, localY, event) => {
+                if (event) event.stopPropagation();
+                window.open('privacy.html', '_self');
+            });
 
-        this.privacyBtn.on('pointerdown', () => {
-            AudioManager.playSFX(this, 'sfx_button');
-            window.open('privacy.html', '_self');
-        });
+        this.add.text(width - 60, height - 30, "CREDITS", { fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#666' })
+            .setOrigin(1, 1).setInteractive({ useHandCursor: true }).on('pointerdown', (pointer, localX, localY, event) => {
+                if (event) event.stopPropagation();
+                if (this.creditsText) { this.creditsText.destroy(); this.creditsText = null; return; }
+                this.creditsText = this.add.text(width / 2, height * 0.5, "DEV: AXEL\nPHASER 3\nv1.1", {
+                    fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.ACCENT_STR, align: 'center', backgroundColor: colors.BG_STR
+                }).setOrigin(0.5).setDepth(100);
+                this.time.delayedCall(2000, () => { if(this.creditsText) this.creditsText.destroy(); this.creditsText = null; });
+            });
+    }
 
-        // 9. Créditos
-        this.creditsBtn = this.add.text(width / 2, height * 0.86, "CREDITS", {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: colors.text
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        this.creditsBtn.on('pointerdown', () => {
-            AudioManager.playSFX(this, 'sfx_button');
-            if (this.creditsText) {
-                this.creditsText.destroy();
-                this.creditsText = null;
-                return;
-            }
-            this.creditsText = this.add.text(width / 2, height * 0.96, "DEVELOPED BY AXEL\nENGINE: PHASER 3\nVERSION 1.0", {
-                fontFamily: '"Press Start 2P"', fontSize: '8px', fill: '#888888', align: 'center'
-            }).setOrigin(0.5);
-            
-            this.tweens.add({ targets: this.creditsText, alpha: { from: 0, to: 1 }, duration: 500 });
-        });
+    refreshUIColors() {
+        const c = CONFIG.THEME;
+        this.title.setFill(c.PRIMARY_STR);
+        this.musicLabel.setFill(c.PRIMARY_STR);
+        this.sfxLabel.setFill(c.PRIMARY_STR);
+        this.muteLabel.setFill(c.PRIMARY_STR);
+        this.vibLabel.setFill(c.PRIMARY_STR);
+        this.bgLabel.setFill(c.PRIMARY_STR);
+        this.themeLabel.setFill(c.PRIMARY_STR);
+        this.diffLabel.setFill(c.PRIMARY_STR);
+        this.closeBtn.setFill(c.PRIMARY_STR);
+        this.musicHandle.setFillStyle(c.PRIMARY);
+        this.sfxHandle.setFillStyle(c.PRIMARY);
+        if (this.themeValue) this.themeValue.setFill(c.PRIMARY_STR);
+        if (this.arrows) this.arrows.forEach(a => a.setFill(c.ACCENT_STR));
     }
 
     getDiffColor(diff) {
-        if (this.currentTheme === 'light') return '#000000';
         switch(diff) {
             case 'EASY': return '#2ecc71';
             case 'MEDIUM': return '#f1c40f';
             case 'HARD': return '#e74c3c';
             default: return '#ffffff';
         }
-    }
-
-    applyLocalTheme() {
-        const colors = this.themes.dark;
-        // Solo actualizamos textos que cambian, los colores son fijos
-        const currentDiff = this.difficulties[this.diffIndex];
-        this.diffBtn.setFill(this.getDiffColor(currentDiff));
     }
 }
