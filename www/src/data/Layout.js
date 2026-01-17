@@ -38,10 +38,28 @@ export const LAYOUT = {
         SWITCH_Y_OFFSET: 135
     },
 
+    // Botones de Juego (Piedra, Papel, Tijera)
+    BUTTONS: {
+        START_OFFSET: 80, // Offset desde la línea inferior de la grilla
+        SPACING: 100      // Espacio vertical entre botones
+    },
+
+    // Columnas Horizontales
+    COLUMNS: {
+        LEFT: 0.25,
+        RIGHT: 0.75,
+        CENTER: 0.5
+    },
+
     // Métodos de utilidad para cálculos rápidos
     getGridTop(height) { return (height * this.GRID.TOP_Y_FACTOR) + this.GRID.TOP_OFFSET; },
     getGridBottom(height) { return height * this.GRID.BOTTOM_Y_FACTOR; },
     getHeartsY(height) { return this.getGridTop(height) + this.HUD.HEARTS_OFFSET; },
     getAvatarY(height) { return (height * this.COMBAT.AVATAR_Y_FACTOR) + this.COMBAT.AVATAR_OFFSET; },
-    getEmojiY(height) { return (height * this.COMBAT.EMOJI_Y_FACTOR) + this.COMBAT.EMOJI_OFFSET; }
+    getEmojiY(height) { return (height * this.COMBAT.EMOJI_Y_FACTOR) + this.COMBAT.EMOJI_OFFSET; },
+    
+    // Helper para obtener X basado en columna (izq/der) y ancho
+    getColumnX(width, isRight) {
+        return isRight ? width * this.COLUMNS.RIGHT : width * this.COLUMNS.LEFT;
+    }
 };

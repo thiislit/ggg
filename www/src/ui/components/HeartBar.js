@@ -16,8 +16,6 @@ export class HeartBar extends Phaser.GameObjects.Container {
         this.init();
         this.scene.add.existing(this);
         this.setDepth(1500); // Profundidad máxima para asegurar visibilidad
-        
-        console.log(`HeartBar created at X:${x}, Y:${y}`);
     }
 
     init() {

@@ -24,7 +24,6 @@ export const PlayerManager = {
         this.data.planet = await Storage.get('playerPlanet', this.DEFAULTS.PLANET);
         this.data.avatar = await Storage.get('playerAvatar', this.DEFAULTS.AVATAR);
         this.data.bestStreak = await Storage.get('streak_best', 0);
-        console.log("PlayerManager initialized:", this.data);
     },
 
     // --- SETTERS CON PERSISTENCIA ---

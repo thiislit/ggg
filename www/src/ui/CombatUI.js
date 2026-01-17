@@ -195,8 +195,8 @@ export class CombatUI {
         this.elements.maskRight = maskRight;
 
         const timerStyle = { fontSize: '12px', fontFamily: CONFIG.FONTS.MAIN, fill: CONFIG.THEME.primaryStr };
-        this.elements.timeText1 = this.scene.add.text(width * 0.25, barY - 20, 'READY', timerStyle).setOrigin(0.5).setDepth(102);
-        this.elements.timeText2 = this.scene.add.text(width * 0.75, barY - 20, 'READY', timerStyle).setOrigin(0.5).setDepth(102);
+        this.elements.timeText1 = this.scene.add.text(LAYOUT.getColumnX(width, false), barY - 20, 'READY', timerStyle).setOrigin(0.5).setDepth(102);
+        this.elements.timeText2 = this.scene.add.text(LAYOUT.getColumnX(width, true), barY - 20, 'READY', timerStyle).setOrigin(0.5).setDepth(102);
     }
 
     updateBarPositions(isPlayerRight, width) {
@@ -325,5 +325,195 @@ export class CombatUI {
         
         this.drawGrid();
         this.updateMainMargins(width, height);
+    }
+
+    // --- ANIMACIONES Y LÓGICA VISUAL ---
+
+    animateRoundStart(isPlayerRight, duration, onComplete) {
+        const { width } = this.scene.scale;
+        const CENTER_X = width / 2;
+        const p1TargetX = isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5;
+        const p2TargetX = isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
+
+        // Reset Emojis
+        this.elements.p1Emoji.setText('✊').setScale(1).setAlpha(1).setOrigin(0.5);
+        this.elements.p2Emoji.setText('✊').setScale(1).setAlpha(1).setOrigin(0.5);
+        this.elements.p1Emoji.setAngle(isPlayerRight ? -90 : 90).setFlipX(!isPlayerRight);
+        this.elements.p2Emoji.setAngle(isPlayerRight ? 90 : -90).setFlipX(isPlayerRight);
+        
+        // Posición inicial fuera de pantalla
+        this.elements.p1Emoji.x = p1TargetX < CENTER_X ? -200 : width + 200;
+        this.elements.p2Emoji.x = p2TargetX < CENTER_X ? -200 : width + 200;
+
+        // Animar entrada
+        this.scene.tweens.add({
+            targets: [this.elements.p1Emoji, this.elements.p2Emoji],
+            x: (target) => (target === this.elements.p1Emoji ? p1TargetX : p2TargetX),
+            duration: 500,
+            ease: 'Back.easeOut',
+            onStart: () => AudioManager.playSFX(this.scene, 'sfx_reveal', { volume: 0.3 * AudioManager.volumes.sfx })
+        });
+
+        // Barras de tiempo
+        [this.elements.timeBar1, this.elements.timeBar2].forEach(bar => {
+            bar.setVisible(true).setFillStyle(CONFIG.THEME.primary).width = (width * 0.4);
+            bar.alpha = 0;
+            bar.scaleX = 1;
+        });
+        this.elements.timeText1.alpha = 0;
+        this.elements.timeText2.alpha = 0;
+
+        this.scene.tweens.add({
+            targets: [this.elements.timeBar1, this.elements.timeBar2, this.elements.timeText1, this.elements.timeText2],
+            alpha: 1,
+            duration: 300,
+            onComplete: onComplete
+        });
+    }
+
+    runTimer(duration, onTimeout) {
+        this.scene.tweens.add({
+            targets: [this.elements.timeBar1, this.elements.timeBar2],
+            scaleX: 0,
+            duration: duration,
+            onUpdate: (tween) => {
+                const remaining = Math.ceil((1 - tween.progress) * 5);
+                this.elements.timeText1.setText(remaining + 's');
+                this.elements.timeText2.setText(remaining + 's');
+                if (tween.progress > 0.7) {
+                    this.elements.timeBar1.setFillStyle(0xff0000);
+                    this.elements.timeBar2.setFillStyle(0xff0000);
+                }
+            },
+            onComplete: onTimeout
+        });
+    }
+
+    stopTimer() {
+        this.scene.tweens.killTweensOf([this.elements.timeBar1, this.elements.timeBar2]);
+    }
+
+    animateResolutionShake(isPlayerRight, onComplete) {
+        const p1StartAngle = isPlayerRight ? -90 : 90;
+        const p2StartAngle = isPlayerRight ? 90 : -90;
+        
+        const p1Emoji = this.elements.p1Emoji;
+        const p2Emoji = this.elements.p2Emoji;
+
+        p1Emoji.setAngle(p1StartAngle).setOrigin(0.5, 1);
+        p2Emoji.setAngle(p2StartAngle).setOrigin(0.5, 1);
+
+        const { width } = this.scene.scale;
+        const CENTER_X = width / 2;
+        const p1FixedX = isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5;
+        const p2FixedX = isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
+        
+        p1Emoji.x = p1FixedX;
+        p2Emoji.x = p2FixedX;
+
+        const offset = 60;
+        p1Emoji.x += (p1StartAngle > 0 ? -offset : offset);
+        p2Emoji.x += (p2StartAngle > 0 ? -offset : offset);
+
+        this.scene.tweens.add({
+            targets: p1Emoji,
+            angle: p1StartAngle - 90,
+            duration: 150,
+            yoyo: true,
+            repeat: 2,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                p1Emoji.setAngle(p1StartAngle).setOrigin(0.5);
+                p1Emoji.x = p1FixedX;
+            }
+        });
+
+        this.scene.tweens.add({
+            targets: p2Emoji,
+            angle: p2StartAngle + 90,
+            duration: 150,
+            yoyo: true,
+            repeat: 2,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                p2Emoji.setAngle(p2StartAngle).setOrigin(0.5);
+                p2Emoji.x = p2FixedX;
+                if (onComplete) onComplete();
+            }
+        });
+    }
+
+    showRoundResult(p1Choice, p2Choice, p1Result, p1Health, p2Health, resultText, color, onComplete) {
+        const icons = ['✊', '✋', '✌️'];
+        if (this.elements.p1Emoji) this.elements.p1Emoji.setText(p1Choice === -1 ? '❌' : icons[p1Choice]);
+        if (this.elements.p2Emoji) this.elements.p2Emoji.setText(icons[p2Choice]);
+        
+        this.scene.tweens.add({
+            targets: [this.elements.p1Emoji, this.elements.p2Emoji],
+            scale: 1.5,
+            duration: 100,
+            yoyo: true,
+            ease: 'Back.easeOut'
+        });
+
+        // Actualizar Corazones
+        this.updateHeartsUI(this.elements.p1Hearts, p1Health);
+        this.updateHeartsUI(this.elements.p2Hearts, p2Health);
+
+        // Texto de Resultado
+        this.elements.p1NameTxt.setText(resultText).setFill(color).setScale(0);
+        this.scene.tweens.add({
+            targets: this.elements.p1NameTxt,
+            scale: 1.2,
+            duration: 400,
+            ease: 'Bounce.easeOut'
+        });
+
+        // Animación específica por resultado (WIN/LOSE/DRAW)
+        if (p1Result === 'WIN') {
+            this.scene.tweens.add({
+                targets: this.elements.p2X,
+                alpha: 1,
+                scale: { from: 2, to: 1 },
+                duration: 300,
+                ease: 'Bounce.easeOut'
+            });
+        } else if (p1Result === 'LOSE') {
+            this.scene.tweens.add({
+                targets: this.elements.p1X,
+                alpha: 1,
+                scale: { from: 2, to: 1 },
+                duration: 300,
+                ease: 'Bounce.easeOut'
+            });
+        } else if (p1Result === 'DRAW') {
+             this.elements.p2NameTxt.setText("DRAW!").setFill(color).setScale(0);
+             this.scene.tweens.add({ targets: this.elements.p2NameTxt, scale: 1.2, duration: 400, ease: 'Bounce.easeOut' });
+        }
+
+        if (onComplete) {
+            this.scene.time.delayedCall(1000, onComplete);
+        }
+    }
+
+    playImpactEffect(color, intensity) {
+        this.scene.cameras.main.flash(200 * intensity, 255, 255, 255);
+        this.scene.cameras.main.shake(200 * intensity, 0.01 * intensity);
+        // Si hay partículas en la escena, las usamos
+        if (this.scene.vfx) {
+            const midX = (this.elements.p1Emoji.x + this.elements.p2Emoji.x) / 2;
+            const midY = (this.elements.p1Emoji.y + this.elements.p2Emoji.y) / 2;
+            this.scene.vfx.setPosition(midX, midY);
+            this.scene.vfx.forEachAlive(p => p.tint = color);
+            this.scene.vfx.explode(30 + (20 * intensity));
+        }
+    }
+
+    hideResultText() {
+         // Resetear textos de estado
+         if (this.elements.p1NameTxt) this.elements.p1NameTxt.setText(PlayerManager.getName()).setFill(CONFIG.THEME.primaryStr).setScale(1);
+         if (this.elements.p2NameTxt) this.elements.p2NameTxt.setText(OPPONENTS.ZORG.name).setFill(CONFIG.THEME.primaryStr).setScale(1);
+         this.elements.p1X.setAlpha(0);
+         this.elements.p2X.setAlpha(0);
     }
 }
