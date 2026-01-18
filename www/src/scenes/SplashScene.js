@@ -56,6 +56,11 @@ export class SplashScene extends Phaser.Scene {
             this.load.audio(audio.key, audio.path);
         });
 
+        // Audio extra para la historia
+        this.load.path = 'assets/story/';
+        this.load.audio('story_bgm', 'sonidofondohistoria.mp3');
+        this.load.path = ''; // Reset path
+
         // 3. Imágenes (Fondos, Avatares)
         Object.values(ASSETS.IMAGES).flat().forEach(img => {
             this.load.image(img.key, img.path);
@@ -104,23 +109,50 @@ export class SplashScene extends Phaser.Scene {
         }
 
         this.sound.pauseOnBlur = false;
+        
         const unlockAudio = () => {
             if (this.sound.context.state === 'suspended') {
                 this.sound.context.resume();
             }
-            // Forzar inicio de música si no está sonando
-            if (!this.sound.get('bgm') || !this.sound.get('bgm').isPlaying) {
-                AudioManager.playMusic(this, 'bgm'); 
+            
+            // Lógica inteligente: Solo reproducir si estamos en escenas que permiten música
+            const activeKey = this.scene.key; // SplashScene
+            // O podemos chequear el Manager de escenas global
+            const currentScenes = this.game.scene.getScenes(true);
+            const isStoryActive = currentScenes.some(s => s.scene.key === 'StoryScene');
+            const isProfileActive = currentScenes.some(s => s.scene.key === 'ProfileScene');
+
+            if (!isStoryActive && !isProfileActive) {
+                if (!this.sound.get('bgm') || !this.sound.get('bgm').isPlaying) {
+                    AudioManager.playMusic(this, 'bgm'); 
+                }
             }
             
+            removeAudioListeners();
+        };
+
+        const removeAudioListeners = () => {
             document.removeEventListener('click', unlockAudio);
             document.removeEventListener('touchstart', unlockAudio);
         };
+
         document.addEventListener('click', unlockAudio);
         document.addEventListener('touchstart', unlockAudio);
 
+        // Limpieza obligatoria al salir de la escena
+        this.events.once('shutdown', removeAudioListeners);
+
         // --- AUTO-JUMP DEBUG LOGIC ---
         const urlParams = new URLSearchParams(window.location.search);
+        
+        // MODO RESET (Para desarrollo)
+        if (urlParams.has('reset')) {
+            console.log('RESETTING GAME DATA...');
+            Storage.clear();
+            // Recargar página limpia sin el parámetro para evitar bucle infinito
+            // window.location.href = window.location.pathname; 
+            // O simplemente continuar como usuario nuevo:
+        }
         
         // --- CREAR ANIMACIONES GLOBALES ---
         const planetAnims = [
@@ -156,6 +188,7 @@ export class SplashScene extends Phaser.Scene {
         if (startScene) {
             this.time.delayedCall(200, () => {
                 switch(startScene) {
+                    case 'story': this.scene.start('StoryScene'); break;
                     case 'menu': this.scene.start('MainMenuScene'); break;
                     case 'game': this.scene.start('GameScene'); break;
                     case 'profile': this.scene.start('ProfileScene'); break;
@@ -288,7 +321,14 @@ export class SplashScene extends Phaser.Scene {
             height * 0.63, 
             "TAP TO START", 
             CONFIG.COLORS.P1_BLUE, 
-            () => this.scene.start('ProfileScene')
+            async () => {
+                const introSeen = await Storage.get('intro_seen', false);
+                if (!introSeen) {
+                    this.scene.start('StoryScene');
+                } else {
+                    this.scene.start('ProfileScene');
+                }
+            }
         );
     }
 }

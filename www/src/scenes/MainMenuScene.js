@@ -12,6 +12,9 @@ export class MainMenuScene extends Phaser.Scene {
     async create() {
         const { width, height } = this.scale;
 
+        // Reactivar música al llegar al menú
+        AudioManager.playMusic(this, 'bgm');
+
         // Lanzar fondo (Estático)
         this.scene.launch('BackgroundScene');
         this.scene.sendToBack('BackgroundScene');

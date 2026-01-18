@@ -11,6 +11,10 @@ export class ProfileScene extends Phaser.Scene {
         super('ProfileScene');
     }
 
+    init(data) {
+        this.fromStory = data && data.fromStory ? true : false;
+    }
+
     async create() {
         const { width, height } = this.scale;
         const colors = CONFIG.THEME;
@@ -19,7 +23,8 @@ export class ProfileScene extends Phaser.Scene {
         this.add.rectangle(0, 0, width, height, colors.BG, 1).setOrigin(0);
         
         // 2. Título Superior
-        this.add.text(width / 2, height * 0.07, "PLAYER PROFILE", {
+        const titleText = this.fromStory ? "IDENTIFY YOURSELF" : "PLAYER PROFILE";
+        this.add.text(width / 2, height * 0.07, titleText, {
             fontFamily: '"Press Start 2P"', fontSize: '26px', fill: colors.PRIMARY_STR
         }).setOrigin(0.5);
 
@@ -172,13 +177,29 @@ export class ProfileScene extends Phaser.Scene {
         new ArrowSelector(this, centerX, currentY, { distance: 130 }, (dir) => this.updateSpecies(dir));
 
         // --- BOTÓN FINAL (Usando Componente Reutilizable) ---
+        // Si venimos de la historia, el botón dice "CONFIRM IDENTITY" y vuelve a la historia
+        const btnText = this.fromStory ? "CONFIRM IDENTITY" : "CONFIRM PROFILE";
+        const btnAction = () => {
+            // Guardar cambios (ya se hace en cada update, pero aseguramos)
+            const finalName = this.nameTxt.text.trim() || "PLAYER 1";
+            PlayerManager.setName(finalName);
+            
+            if (this.fromStory) {
+                // Volver a la historia para terminarla
+                this.scene.start('StoryScene', { resume: true });
+            } else {
+                // Ir al menú normal
+                this.scene.start('MainMenuScene');
+            }
+        };
+
         new RetroButton(
             this, 
             centerX, 
             height * 0.77, 
-            "CONFIRM PROFILE", 
+            btnText, 
             colors.PRIMARY, 
-            () => this.scene.start('MainMenuScene')
+            btnAction
         );
     }
 
