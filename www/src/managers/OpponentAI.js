@@ -20,9 +20,23 @@ export class OpponentAI {
         
         // Tirada de inteligencia vs azar
         if (Math.random() < smartChance) {
-            // Lógica simple: Contrarrestar lo que el jugador usa más
-            const mostUsed = playerStats.indexOf(Math.max(...playerStats));
-            return (mostUsed + 1) % 3;
+            const mostUsed = playerStats.indexOf(Math.max(...playerStats)); // Lo que el jugador usa más
+            const winningMove = (mostUsed + 1) % 3; // Lo que gana al más usado
+            const losingMove = (mostUsed + 2) % 3; // Lo que pierde contra el más usado
+            const tyingMove = mostUsed; // Lo que empata con el más usado
+
+            let smartStrategy = [];
+            if (diff === 'MEDIUM') {
+                // 60% ganar, 20% empatar, 20% perder (simular variabilidad)
+                smartStrategy = [winningMove, winningMove, winningMove, tyingMove, losingMove];
+            } else if (diff === 'HARD') {
+                // 80% ganar, 20% perder (más agresiva, con faroles ocasionales)
+                smartStrategy = [winningMove, winningMove, winningMove, winningMove, losingMove];
+            } else { // EASY u otros, aunque debería ser solo random
+                smartStrategy = [randomChoice]; // Fallback, aunque EASY es siempre random
+            }
+            
+            return smartStrategy[Math.floor(Math.random() * smartStrategy.length)];
         }
         
         return randomChoice;

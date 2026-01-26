@@ -1,7 +1,7 @@
 import { CONFIG } from '../data/config.js';
 import { AudioManager } from '../managers/AudioManager.js';
-import { Storage } from '../managers/Storage.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
+import { DataManager } from '../managers/DataManager.js';
+import { ASSET_KEYS } from '../constants/AssetKeys.js';
 
 export class StoryScene extends Phaser.Scene {
     constructor() {
@@ -9,47 +9,47 @@ export class StoryScene extends Phaser.Scene {
         // Secuencia narrativa
         this.storySteps = [
             {
-                image: 'robert_normal',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL,
                 text: "INCOMING TRANSMISSION...\nIs anyone there? Do you copy?",
                 delay: 50
             },
             {
-                image: 'robert_normal',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL,
                 text: "My name is Captain Robert. I'm transmitting on all emergency frequencies.",
                 delay: 50
             },
             {
-                image: 'robert_normal',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL,
                 text: "I am currently stranded at coordinates: SECTOR 7-G / NEBULA-9. Fuel is depleted.",
                 delay: 50
             },
             {
-                image: 'robert_normal',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL,
                 text: "Wait... the signal is getting stronger. Someone IS listening. Thank the stars.",
                 delay: 50
             },
             {
-                image: 'robert_normal',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL,
                 text: "I can feel your connection, {PLAYER_NAME}. It gives me hope in this darkness.",
                 delay: 50
             },
             {
-                image: 'robert_sad',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_SAD,
                 text: "Thank you for answering my signal. You don't know how much this means to me.",
                 delay: 50
             },
             {
-                image: 'robert_normal',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL,
                 text: "But there is no time. Zorg... he has my daughter. He took her to the Dark Sector.",
                 delay: 50
             },
             {
-                image: 'robert_normal',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL,
                 text: "He is strong, but you... I sense you can defeat him in the ancient duel.",
                 delay: 50
             },
             {
-                image: 'robert_smile',
+                image: ASSET_KEYS.IMAGES.STORY_ROBERT_SMILE,
                 text: "Please, save her. Good luck, pilot. Over and out.",
                 delay: 50
             }
@@ -64,18 +64,18 @@ export class StoryScene extends Phaser.Scene {
 
     preload() {
         this.load.path = 'assets/story/';
-        this.load.image('robert_normal', 'robert_normal.png');
-        this.load.image('robert_sad', 'robert_sad.png');
-        this.load.image('robert_smile', 'robert_smile.png');
-        this.load.image('story_bg', 'galaxiabackground.png');
+        this.load.image(ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL, 'robert_normal.png');
+        this.load.image(ASSET_KEYS.IMAGES.STORY_ROBERT_SAD, 'robert_sad.png');
+        this.load.image(ASSET_KEYS.IMAGES.STORY_ROBERT_SMILE, 'robert_smile.png');
+        this.load.image(ASSET_KEYS.IMAGES.STORY_BG, 'galaxiabackground.png');
         
         // Cargar sonidos de la historia
-        this.load.audio('sfx_signal', 'captandosenal.mp3');
-        this.load.audio('sfx_type', 'sonidoletras.mp3');
-        this.load.audio('sfx_galaxy', 'sonidogalaxia.mp3');
-        this.load.audio('sfx_end', 'sonidofindetransmicion.mp3');
+        this.load.audio(ASSET_KEYS.AUDIO.STORY_SFX_SIGNAL, 'captandosenal.mp3');
+        this.load.audio(ASSET_KEYS.AUDIO.STORY_SFX_TYPE, 'sonidoletras.mp3');
+        this.load.audio(ASSET_KEYS.AUDIO.STORY_SFX_GALAXY, 'sonidogalaxia.mp3');
+        this.load.audio(ASSET_KEYS.AUDIO.STORY_SFX_END, 'sonidofindetransmicion.mp3');
         
-        this.load.spritesheet('galaxy_anim', 'galaxy_bg.png', {
+        this.load.spritesheet(ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM, 'galaxy_bg.png', {
             frameWidth: 100,
             frameHeight: 100,
             startFrame: 0,
@@ -89,25 +89,25 @@ export class StoryScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // Iniciar música de fondo de la historia
-        AudioManager.playMusic(this, 'story_bgm', { volume: 0.4 });
+        AudioManager.playMusic(this, ASSET_KEYS.AUDIO.STORY_BGM, { volume: 0.4 });
 
         // Reproducir sonido de buscando señal (solo al inicio real, no en resume)
         if (!this.resumeGame) {
-            AudioManager.playSFX(this, 'sfx_signal', { volume: 0.6 });
+            AudioManager.playSFX(this, ASSET_KEYS.AUDIO.STORY_SFX_SIGNAL, { volume: 0.6 });
         }
 
         // Crear animación de galaxia
-        if (this.textures.exists('galaxy_anim') && !this.anims.exists('galaxy_spin')) {
+        if (this.textures.exists(ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM) && !this.anims.exists(ASSET_KEYS.ANIMATIONS.GALAXY_SPIN)) {
             this.anims.create({
-                key: 'galaxy_spin',
-                frames: this.anims.generateFrameNumbers('galaxy_anim', { start: 0, end: 399 }),
+                key: ASSET_KEYS.ANIMATIONS.GALAXY_SPIN,
+                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM, { start: 0, end: 399 }),
                 frameRate: 15,
                 repeat: -1
             });
         }
 
         // 0. Fondo Base Estático
-        this.mainBg = this.add.image(width/2, height/2, 'story_bg')
+        this.mainBg = this.add.image(width/2, height/2, ASSET_KEYS.IMAGES.STORY_BG)
             .setDisplaySize(width, height)
             .setAlpha(0.6);
 
@@ -121,11 +121,11 @@ export class StoryScene extends Phaser.Scene {
         });
 
         // Sprite de Galaxia (Oculto al inicio)
-        this.galaxy = this.add.sprite(width/2, height/2, 'galaxy_anim').setAlpha(0);
+        this.galaxy = this.add.sprite(width/2, height/2, ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM).setAlpha(0);
         this.galaxy.setScale(8);
         
-        if (this.anims.exists('galaxy_spin')) {
-            this.galaxy.play('galaxy_spin');
+        if (this.anims.exists(ASSET_KEYS.ANIMATIONS.GALAXY_SPIN)) {
+            this.galaxy.play(ASSET_KEYS.ANIMATIONS.GALAXY_SPIN);
         } else {
             console.warn('Animation galaxy_spin missing, showing static frame.');
         }
@@ -133,7 +133,7 @@ export class StoryScene extends Phaser.Scene {
         this.createScanlines(width, height);
 
         // 2. Personaje (Robert)
-        this.robert = this.add.image(width / 2, height * 0.35, 'robert_normal');
+        this.robert = this.add.image(width / 2, height * 0.35, ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL);
         const maxW = width * 0.8;
         const scale = maxW / this.robert.width;
         this.robert.setScale(scale > 1 ? 1 : scale);
@@ -242,7 +242,7 @@ export class StoryScene extends Phaser.Scene {
             this.tweens.add({ targets: this.galaxy, alpha: 0.8, scale: 10, duration: 3500, ease: 'Cubic.easeOut' });
             
             // REPRODUCIR SONIDO GALAXIA
-            AudioManager.playSFX(this, 'sfx_galaxy', { volume: 1.0 });
+            AudioManager.playSFX(this, ASSET_KEYS.AUDIO.STORY_SFX_GALAXY, { volume: 1.0 });
             
         } else if (index === 3) {
             // PASO 3: REGRESA ROBERT
@@ -268,7 +268,7 @@ export class StoryScene extends Phaser.Scene {
         // PREPARAR TEXTO
         let finalText = step.text;
         if (finalText.includes('{PLAYER_NAME}')) {
-             const realName = PlayerManager.getName();
+             const realName = DataManager.getName();
              finalText = finalText.replace('{PLAYER_NAME}', realName);
         }
 
@@ -289,7 +289,7 @@ export class StoryScene extends Phaser.Scene {
                 if (callback) callback();
             }
         });
-        AudioManager.playSFX(this, 'sfx_button', { volume: 0.5 });
+        AudioManager.playSFX(this, ASSET_KEYS.AUDIO.SFX_BUTTON, { volume: 0.5 });
     }
 
     typeText(fullText) {
@@ -320,7 +320,7 @@ export class StoryScene extends Phaser.Scene {
 
             // Reproducir sonido cada 3 letras para no saturar
             if (charCount % 3 === 0 && char !== ' ') {
-                AudioManager.playSFX(this, 'sfx_type', {
+                AudioManager.playSFX(this, ASSET_KEYS.AUDIO.STORY_SFX_TYPE, {
                     volume: 0.3,
                     detune: Math.random() * 200 - 100
                 });
@@ -355,7 +355,7 @@ export class StoryScene extends Phaser.Scene {
         
         let finalText = step.text;
         if (finalText.includes('{PLAYER_NAME}')) {
-             const realName = PlayerManager.getName();
+             const realName = DataManager.getName();
              finalText = finalText.replace('{PLAYER_NAME}', realName);
         }
         
@@ -369,10 +369,10 @@ export class StoryScene extends Phaser.Scene {
     }
 
     async finishStory() {
-        await Storage.set('intro_seen', true);
+        await DataManager.setIntroSeen(true);
         
         // Sonido de desconexión final
-        AudioManager.playSFX(this, 'sfx_end', { volume: 0.8 });
+        AudioManager.playSFX(this, ASSET_KEYS.AUDIO.STORY_SFX_END, { volume: 0.8 });
 
         this.tweens.add({
             targets: [this.robert, this.textBox, this.mainBg, this.galaxy],

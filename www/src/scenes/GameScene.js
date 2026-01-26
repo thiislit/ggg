@@ -1,14 +1,15 @@
 import { CONFIG } from '../data/config.js';
-import { Storage } from '../managers/Storage.js';
 import { FatalityManager } from '../managers/FatalityManager.js';
 import { OpponentAI } from '../managers/OpponentAI.js';
 import { AudioManager } from '../managers/AudioManager.js';
 import { DIALOGUES } from '../managers/DialogueManager.js';
 import { OPPONENTS } from '../data/Opponents.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
+import { DataManager } from '../managers/DataManager.js';
+import { CampaignManager } from '../managers/CampaignManager.js';
 import { CombatUI } from '../ui/CombatUI.js';
 import { DialogueBox } from '../ui/components/DialogueBox.js';
 import { LAYOUT } from '../data/Layout.js';
+import { ASSET_KEYS } from '../constants/AssetKeys.js';
 
 // --- MÁQUINA DE ESTADOS FINITA ---
 const GAME_STATE = {
@@ -41,26 +42,77 @@ export class GameScene extends Phaser.Scene {
     }
 
     async create() {
-        this.ui = new CombatUI(this);
-        
+        let enemy; // Declare enemy here
+
         // Cargar Datos
-        this.playerName = PlayerManager.getName();
-        this.playerSpecies = PlayerManager.getSpecies();
-        this.playerPlanet = PlayerManager.getPlanet();
-        this.playerAvatar = PlayerManager.getAvatar();
+        this.playerName = DataManager.getName();
+        this.playerSpecies = DataManager.getSpecies();
+        this.playerPlanet = DataManager.getPlanet();
+        this.playerAvatar = DataManager.getAvatar();
         
-        this.isPlayerRight = await Storage.get('isPlayerRight', false);
-        this.difficulty = await Storage.get('difficulty', 'MEDIUM');
+        this.isPlayerRight = DataManager.isPlayerRight();
+        
+        // --- CONFIGURACIÓN DE MODO DE JUEGO ---
+        if (CampaignManager.isActive()) {
+            const levelConfig = CampaignManager.getCurrentConfig();
+            this.difficulty = levelConfig.difficulty;
+            this.cpuName = levelConfig.name; // Ej: "OUTER RIM"
+            enemy = OPPONENTS.ZORG; // Campaign mode always fights Zorg
+            this.p2Health = 3; // For campaign, health is always 3
+            
+            // Cambiar fondo según nivel
+            const bgScene = this.scene.get('BackgroundScene');
+            if (bgScene) {
+                bgScene.changeBackground(levelConfig.bg);
+            }
+        } else {
+            // MODO RÁPIDO (Estándar)
+            this.difficulty = DataManager.getDifficulty();
+            
+            let availableOpponents = [...OPPONENTS.QUICK_PLAY_POOL];
+
+            if (DataManager.hasCompletedStory()) {
+                availableOpponents.push(OPPONENTS.ZORG); // Add Zorg if story is completed
+            }
+
+            // Seleccionar un enemigo aleatorio del pool de Quick Play
+            const randomEnemyIndex = Phaser.Math.Between(0, availableOpponents.length - 1);
+            enemy = availableOpponents[randomEnemyIndex];
+            
+            this.p2Health = enemy.stats.health;
+            this.cpuName = enemy.name;
+
+            // Lógica de backgrounds para Quick Play
+            let quickPlayBackgroundPool = ['bg_purple']; // Fondo base para Quick Play
+
+            if (DataManager.hasCompletedStory()) {
+                quickPlayBackgroundPool.push('bg_campaign_easy', 'bg_campaign_medium', 'bg_campaign_hard');
+            }
+
+            const randomBgIndex = Phaser.Math.Between(0, quickPlayBackgroundPool.length - 1);
+            const selectedBg = quickPlayBackgroundPool[randomBgIndex];
+
+            const bgScene = this.scene.get('BackgroundScene');
+            if (bgScene) bgScene.changeBackground(selectedBg);
+        }
+
+        // Asegurarse de que 'enemy' sea un objeto válido con una propiedad 'avatar'
+        if (!enemy || !enemy.avatar) {
+            console.warn("Invalid enemy object provided to CombatUI. Using ZORG as fallback.");
+            enemy = OPPONENTS.ZORG; 
+        }
+        this.ui = new CombatUI(this, enemy); // Pass enemy here!
 
         // Reset de Partida
         this.p1Health = 3;
-        const enemy = OPPONENTS.ZORG;
-        this.p2Health = enemy.stats.health;
-        this.cpuName = enemy.name;
         this.playerStats = [0, 0, 0];
         this.activeBubbles = [];
 
         this.fatalityManager = new FatalityManager(this);
+        this.ui.resetAIIndicator(); // Asegurar que el indicador esté en rojo al inicio
+
+        // Asegurar música de batalla
+        AudioManager.playMusic(this, ASSET_KEYS.AUDIO.MUSIC_BGM, { volume: 0.5 });
 
         // Construir Escena
         this.buildGame();
@@ -73,8 +125,7 @@ export class GameScene extends Phaser.Scene {
         this.nextRondaBtn = this.ui.createNextRondaBtn("PLAY", this.barY);
         this.setupNextRoundBtnListeners();
 
-        const tutorialSeen = await Storage.get('tutorial_seen', false);
-        if (!tutorialSeen) {
+        if (!DataManager.hasSeenTutorial()) {
             this.showTutorial();
         }
     }
@@ -110,6 +161,19 @@ export class GameScene extends Phaser.Scene {
         this.createResponsiveButtons(width, height, FOOT_Y);
         this.ui.initControls(width, height, 20);
 
+        // Posicionar el indicador de la IA inicialmente
+        let indicatorBtnRef; // Referencia al botón (mute o config)
+        if (!this.isPlayerRight) { // Máquina a la derecha
+            indicatorBtnRef = this.ui.elements.muteBtn;
+        } else { // Máquina a la izquierda
+            indicatorBtnRef = this.ui.elements.configBtn;
+        }
+        // Posicionar encima del centro del botón, con offset vertical para que esté "arriba"
+        const indicatorX_initial = indicatorBtnRef.getBounds().centerX;
+        const indicatorY_initial = indicatorBtnRef.getBounds().top - 10; // 10px por encima del borde superior real del botón
+        
+        this.ui.elements.aiIndicator.setPosition(indicatorX_initial, indicatorY_initial);
+
         // Referencias para animaciones (Legacy support para FatalityManager si las usa directo)
         // Idealmente FatalityManager debería usar la UI, pero por ahora mantenemos referencias
         this.p1Emoji = this.ui.elements.p1Emoji;
@@ -134,6 +198,13 @@ export class GameScene extends Phaser.Scene {
         this.ui.stopTimer();
         this.ui.hideResultText();
         this.resetButtonColors();
+        this.ui.resetAIIndicator(); // Reiniciar el indicador de la IA a rojo
+
+        // La IA elige su movimiento en los primeros segundos (hasta 3 segundos)
+        this.time.delayedCall(Phaser.Math.Between(100, 3000), () => { // Retraso aleatorio entre 0.1 y 3 segundos
+            this.cpuChoiceThisRound = this.getCpuChoice(); // La IA hace su elección
+            this.ui.updateAIIndicator(CONFIG.COLORS.AI_READY_GREEN); // Cambiar el indicador a verde
+        });
 
         // Cambio de Estado -> COUNTDOWN
         this.setState(GAME_STATE.COUNTDOWN);
@@ -160,7 +231,7 @@ export class GameScene extends Phaser.Scene {
 
         // Lógica visual del botón seleccionado
         this.playerStats[index]++;
-        AudioManager.playSFX(this, ['sfx_rock', 'sfx_paper', 'sfx_scissors'][index]);
+        AudioManager.playSFX(this, [ASSET_KEYS.AUDIO.SFX_ROCK, ASSET_KEYS.AUDIO.SFX_PAPER, ASSET_KEYS.AUDIO.SFX_SCISSORS][index]);
         if (navigator.vibrate) navigator.vibrate(20);
 
         // Feedback visual en el botón
@@ -182,7 +253,7 @@ export class GameScene extends Phaser.Scene {
         this.setState(GAME_STATE.LOCKED);
         this.ui.stopTimer();
         
-        const cpuChoice = this.getCpuChoice();
+        const cpuChoice = this.cpuChoiceThisRound; // Usar la elección de la IA ya almacenada
         
         // Animación "Rock, Paper, Scissors... Shoot!"
         this.ui.animateResolutionShake(this.isPlayerRight, () => {
@@ -196,7 +267,7 @@ export class GameScene extends Phaser.Scene {
         let resultText = ""; 
         let color = CONFIG.THEME.primaryStr;
         let resultType = "LOSE"; // WIN, LOSE, DRAW
-        let soundKey = "sfx_lose";
+        let soundKey = ASSET_KEYS.AUDIO.SFX_LOSE;
 
         // Reglas
         if (p1 === -1) { 
@@ -208,14 +279,14 @@ export class GameScene extends Phaser.Scene {
         else if (p1 === p2) { 
             resultText = "DRAW!"; 
             resultType = "DRAW";
-            soundKey = "sfx_tie";
+            soundKey = ASSET_KEYS.AUDIO.SFX_TIE;
         } 
         else if ((p1 === 0 && p2 === 2) || (p1 === 1 && p2 === 0) || (p1 === 2 && p2 === 1)) { 
             resultText = "YOU WIN!"; 
             color = CONFIG.THEME.primaryStr; 
             this.p2Health--; 
             resultType = "WIN";
-            soundKey = "sfx_win";
+            soundKey = ASSET_KEYS.AUDIO.SFX_WIN;
         } 
         else { 
             resultText = "YOU LOSE!"; 
@@ -269,29 +340,49 @@ export class GameScene extends Phaser.Scene {
     async finishGame(isPlayerWin) {
         this.setState(GAME_STATE.GAME_OVER);
 
-        const winnerName = isPlayerWin ? this.playerName : this.cpuName;
-        let currentStreak = await Storage.get('streak_current', 0);
-        let isNewRecord = false;
+        let campaignStatus = null;
 
-        if (isPlayerWin) {
-            currentStreak++;
-            isNewRecord = await PlayerManager.setBestStreak(currentStreak);
-        } else {
-            currentStreak = 0;
+        // --- LÓGICA DE CAMPAÑA ---
+        if (CampaignManager.isActive()) {
+            if (isPlayerWin) {
+                const result = CampaignManager.registerWin();
+                campaignStatus = result.status;
+            } else {
+                campaignStatus = CampaignManager.registerLoss().status;
+            }
         }
 
-        await Storage.set('streak_current', currentStreak);
+        // --- LÓGICA ESTÁNDAR (Racha) ---
+        const winnerName = isPlayerWin ? this.playerName : this.cpuName;
+        let currentStreak = DataManager.getCurrentStreak();
+        let isNewRecord = false;
+
+        if (!CampaignManager.isActive()) { // Solo contar racha en Quick Play
+            if (isPlayerWin) {
+                currentStreak++;
+                isNewRecord = await DataManager.setBestStreak(currentStreak);
+            } else {
+                currentStreak = 0;
+            }
+            await DataManager.setCurrentStreak(currentStreak);
+        }
         
         this.tweens.add({
             targets: this.cameras.main,
             alpha: 0,
             duration: CONFIG.TIMING.FADE_DURATION,
             onComplete: () => {
-                this.scene.start('GameOverScene', { 
-                    winner: winnerName, 
-                    streak: currentStreak,
-                    isNewRecord: isNewRecord
-                });
+                if (campaignStatus === 'CONTINUE_LEVEL') {
+                    this.scene.restart(); 
+                } else {
+                    this.scene.start('GameOverScene', { 
+                        winner: winnerName, 
+                        streak: currentStreak,
+                        isNewRecord: isNewRecord,
+                        campaignStatus: campaignStatus,
+                        isCampaign: CampaignManager.isActive()
+                    });
+                }
             }
         });
     }
@@ -321,7 +412,7 @@ export class GameScene extends Phaser.Scene {
         const bg = this.add.circle(0, 0, 38, 0x000000, 0.1).setStrokeStyle(CONFIG.UI.BORDER_WIDTH, borderColor);
         
         const emo = this.add.text(0, 0, emoji, { fontSize: CONFIG.FONTS.SIZES.EMOJI, padding: { x: 10, y: 10 } }).setOrigin(0.5);
-        const filter = this.add.circle(0, 0, 34, 0x000000, 0.4);
+        const filter = this.add.circle(0, 0, 38, 0x000000, 0.4);
         const txt = this.add.text(0, 50, name, { fontFamily: CONFIG.FONTS.MAIN, fontSize: CONFIG.FONTS.SIZES.SMALL, fill: CONFIG.THEME.primaryStr }).setOrigin(0.5);
         
         container.add([bg, emo, filter, txt]);
@@ -338,7 +429,7 @@ export class GameScene extends Phaser.Scene {
     setupNextRoundBtnListeners() {
         if (!this.nextRondaBtn) return;
         this.nextRondaBtn.on('pointerdown', () => { 
-            AudioManager.playSFX(this, 'sfx_button');
+            AudioManager.playSFX(this, ASSET_KEYS.AUDIO.SFX_BUTTON);
             this.nextRondaBtn.setScale(0.9); 
             if (navigator.vibrate) navigator.vibrate(20); 
         });
@@ -356,7 +447,7 @@ export class GameScene extends Phaser.Scene {
         if (this.currentState !== GAME_STATE.IDLE) return;
         
         this.isPlayerRight = !this.isPlayerRight;
-        Storage.set('isPlayerRight', this.isPlayerRight); 
+        DataManager.setIsPlayerRight(this.isPlayerRight); 
         this.ui.drawGrid();
 
         const { width, height } = this.scale; 
@@ -370,8 +461,21 @@ export class GameScene extends Phaser.Scene {
         const p2TargetX = this.isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
 
         // Animación de cambio (UI Moves)
-        this.tweens.add({ targets: [this.ui.elements.p1Profile, this.ui.elements.p1Avatar, this.ui.elements.p1Hearts], x: p1TargetX, duration: 400, ease: 'Power2' });
-        this.tweens.add({ targets: [this.ui.elements.p2Profile, this.ui.elements.p2Avatar, this.ui.elements.p2Hearts], x: p2TargetX, duration: 400, ease: 'Power2' });
+        this.tweens.add({ targets: [this.ui.elements.p1Profile, this.ui.elements.p1Avatar, this.ui.elements.p1Hearts, this.ui.elements.p1Emoji, this.ui.elements.p1X], x: p1TargetX, duration: 400, ease: 'Power2' });
+        
+        let indicatorBtnRef; // Referencia al botón (mute o config)
+        // Si la máquina está a la derecha (!this.isPlayerRight), el indicador va encima del muteBtn
+        if (!this.isPlayerRight) {
+            indicatorBtnRef = this.ui.elements.muteBtn;
+        } else { // La máquina está a la izquierda (this.isPlayerRight), el indicador va encima del configBtn
+            indicatorBtnRef = this.ui.elements.configBtn;
+        }
+        // Posicionar encima del centro del botón, con offset vertical para que esté "arriba"
+        const aiIndicatorTargetX = indicatorBtnRef.getBounds().centerX;
+        const aiIndicatorTargetY = indicatorBtnRef.getBounds().top - 10; // 10px por encima del borde superior real del botón
+        
+        this.tweens.add({ targets: [this.ui.elements.p2Profile, this.ui.elements.p2Avatar, this.ui.elements.p2Hearts, this.ui.elements.p2Emoji, this.ui.elements.p2X], x: p2TargetX, duration: 400, ease: 'Power2' });
+        this.tweens.add({ targets: this.ui.elements.aiIndicator, x: aiIndicatorTargetX, y: aiIndicatorTargetY, duration: 400, ease: 'Power2' }); // Mover también en Y
 
         this.p1Emoji.setFlipX(!this.isPlayerRight);
         this.p2Emoji.setFlipX(this.isPlayerRight);
@@ -438,12 +542,11 @@ export class GameScene extends Phaser.Scene {
 
     applyTheme() {
         const theme = CONFIG.THEME; 
-        Storage.get('bgDim', false).then(bgDim => {
-            const bgColor = bgDim ? 'rgba(0,10,0,0.8)' : 'rgba(0,0,0,0)';
-            if (this.cameras && this.cameras.main) {
-                this.cameras.main.setBackgroundColor(bgColor);
-            }
-        });
+        const bgDim = DataManager.isBgDim();
+        const bgScene = this.scene.get('BackgroundScene');
+        if (bgScene && bgScene.applyDim) {
+            bgScene.applyDim(bgDim);
+        }
         
         this.ui.applyTheme();
         
@@ -494,9 +597,9 @@ export class GameScene extends Phaser.Scene {
 
     checkTutorial() {
         // Wrapper para tutorial
-        Storage.get('tutorial_seen', 'false').then(seen => {
-            if (seen === 'false') this.showTutorial();
-        });
+        if (!DataManager.hasSeenTutorial()) {
+            this.showTutorial();
+        }
     }
 
     showTutorial() {
@@ -510,7 +613,7 @@ export class GameScene extends Phaser.Scene {
         const bText = this.add.text(0, 0, "GOT IT!", { fontFamily: CONFIG.FONTS.MAIN, fontSize: '16px' }).setOrigin(0.5);
         btn.add([bRect, bText]);
         bRect.on('pointerdown', async () => {
-            await Storage.set('tutorial_seen', true);
+            await DataManager.setTutorialSeen(true);
             this.tweens.add({ targets: this.tutorialContainer, alpha: 0, duration: 300, onComplete: () => this.tutorialContainer.destroy() });
         });
         this.tutorialContainer.add([overlay, text, btn]);

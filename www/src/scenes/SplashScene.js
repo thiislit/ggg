@@ -1,8 +1,9 @@
 import { CONFIG } from '../data/config.js';
-import { Storage } from '../managers/Storage.js';
 import { AudioManager } from '../managers/AudioManager.js';
 import { ASSETS } from '../data/AssetManifest.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
+import { ASSET_KEYS } from '../constants/AssetKeys.js';
+import { DataManager } from '../managers/DataManager.js';
+import { CampaignManager } from '../managers/CampaignManager.js';
 import { RetroButton } from '../ui/components/RetroButton.js';
 
 export class SplashScene extends Phaser.Scene {
@@ -58,7 +59,7 @@ export class SplashScene extends Phaser.Scene {
 
         // Audio extra para la historia
         this.load.path = 'assets/story/';
-        this.load.audio('story_bgm', 'sonidofondohistoria.mp3');
+        this.load.audio(ASSET_KEYS.AUDIO.STORY_BGM, 'sonidofondohistoria.mp3');
         this.load.path = ''; // Reset path
 
         // 3. Imágenes (Fondos, Avatares)
@@ -73,23 +74,21 @@ export class SplashScene extends Phaser.Scene {
     }
 
     async create() {
+        // Inicializar todos los datos del juego desde el almacenamiento
+        await DataManager.init();
+
         // Inicializar tema de colores antes de que nada se dibuje
-        const savedBg = await Storage.get('bg_theme', 'bg_purple');
+        const savedBg = DataManager.getBgTheme();
         CONFIG.THEME.setFromPalette(savedBg);
 
         // Inicializar estado de Mute
-        const isMuted = await Storage.get('isMuted', false);
-        this.sound.mute = isMuted;
+        this.sound.mute = DataManager.isMuted();
 
         // Inicializar gestor de audio
         await AudioManager.init(this);
 
-        // Inicializar datos del jugador
-        await PlayerManager.init();
-
         // Iniciar el fondo animado en paralelo
         this.scene.launch('BackgroundScene');
-        // Aseguramos que el fondo se quede DETRÁS de esta escena (y de todas las futuras)
         this.scene.sendToBack('BackgroundScene');
         this.scene.bringToTop(); 
 
@@ -123,8 +122,8 @@ export class SplashScene extends Phaser.Scene {
             const isProfileActive = currentScenes.some(s => s.scene.key === 'ProfileScene');
 
             if (!isStoryActive && !isProfileActive) {
-                if (!this.sound.get('bgm') || !this.sound.get('bgm').isPlaying) {
-                    AudioManager.playMusic(this, 'bgm'); 
+                if (!this.sound.get(ASSET_KEYS.AUDIO.MUSIC_BGM) || !this.sound.get(ASSET_KEYS.AUDIO.MUSIC_BGM).isPlaying) {
+                    AudioManager.playMusic(this, ASSET_KEYS.AUDIO.MUSIC_BGM); 
                 }
             }
             
@@ -148,19 +147,17 @@ export class SplashScene extends Phaser.Scene {
         // MODO RESET (Para desarrollo)
         if (urlParams.has('reset')) {
             console.log('RESETTING GAME DATA...');
-            Storage.clear();
-            // Recargar página limpia sin el parámetro para evitar bucle infinito
-            // window.location.href = window.location.pathname; 
+            DataManager.clear();
             // O simplemente continuar como usuario nuevo:
         }
         
         // --- CREAR ANIMACIONES GLOBALES ---
         const planetAnims = [
-            { key: 'anim_earth', texture: 'planet_tierra' },
-            { key: 'anim_mars', texture: 'planet_mars' },
-            { key: 'anim_kepler', texture: 'planet_kepler' },
-            { key: 'anim_nebula', texture: 'planet_nebula' },
-            { key: 'anim_zorg_planet', texture: 'planet_zorg' }
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_EARTH, texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_MARS, texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER, texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA, texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET, texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG }
         ];
 
         planetAnims.forEach(anim => {
@@ -175,15 +172,27 @@ export class SplashScene extends Phaser.Scene {
         });
 
         // Mantener planet_rotate como alias para Earth por compatibilidad
-        if (!this.anims.exists('planet_rotate')) {
+        if (!this.anims.exists(ASSET_KEYS.ANIMATIONS.PLANET_ROTATE)) {
             this.anims.create({
-                key: 'planet_rotate',
-                frames: this.anims.generateFrameNumbers('planet_tierra', { start: 0, end: 399 }),
+                key: ASSET_KEYS.ANIMATIONS.PLANET_ROTATE,
+                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, { start: 0, end: 399 }),
                 frameRate: 15,
                 repeat: -1
             });
         }
 
+        // Parámetro ?level=
+        const startLevel = urlParams.get('level');
+        if (startLevel) {
+            this.time.delayedCall(200, () => {
+                CampaignManager.startCampaign();
+                CampaignManager.state.currentLevel = parseInt(startLevel, 10);
+                this.scene.start('GameScene');
+            });
+            return;
+        }
+
+        // Parámetro ?scene=
         const startScene = urlParams.get('scene');
         if (startScene) {
             this.time.delayedCall(200, () => {
@@ -321,9 +330,8 @@ export class SplashScene extends Phaser.Scene {
             height * 0.63, 
             "TAP TO START", 
             CONFIG.COLORS.P1_BLUE, 
-            async () => {
-                const introSeen = await Storage.get('intro_seen', false);
-                if (!introSeen) {
+            () => {
+                if (!DataManager.hasSeenIntro()) {
                     this.scene.start('StoryScene');
                 } else {
                     this.scene.start('ProfileScene');

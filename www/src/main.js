@@ -6,11 +6,13 @@ import { SettingsScene } from './scenes/SettingsScene.js';
 import { BackgroundScene } from './scenes/BackgroundScene.js';
 import { ProfileScene } from './scenes/ProfileScene.js';
 import { StoryScene } from './scenes/StoryScene.js';
+import { DataManager } from './managers/DataManager.js'; // NEW IMPORT
+import { GAME_WIDTH, GAME_HEIGHT } from './constants/game.js';
 
 const config = {
     type: Phaser.AUTO,
-    width: 720,
-    height: 1280,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
     backgroundColor: '#000000', // Color base negro (se verá mientras carga el fondo)
     pixelArt: true,
     scale: {

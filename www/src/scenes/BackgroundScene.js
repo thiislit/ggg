@@ -1,5 +1,6 @@
 import { CONFIG } from '../data/config.js';
-import { Storage } from '../managers/Storage.js';
+import { DataManager } from '../managers/DataManager.js';
+import { ASSET_KEYS } from '../constants/AssetKeys.js';
 
 export class BackgroundScene extends Phaser.Scene {
     constructor() {
@@ -11,7 +12,7 @@ export class BackgroundScene extends Phaser.Scene {
         const height = this.scale.height;
         
         // Leer el tema guardado
-        const savedTheme = await Storage.get('bg_theme', 'bg_purple');
+        const savedTheme = DataManager.getBgTheme();
 
         this.cameras.main.setScroll(0, 0);
         this.cameras.main.setBackgroundColor(CONFIG.COLORS.BG_DARK);
@@ -19,12 +20,10 @@ export class BackgroundScene extends Phaser.Scene {
         // --- MODO IMAGEN ESTÁTICA ---
         this.bgStatic = this.add.image(width / 2, height / 2, savedTheme);
         
-        // Forzamos el tamaño inicial para llenar la pantalla
         this.bgStatic.setDisplaySize(width, height);
         this.bgStatic.setDepth(-100);
 
-        // Si es el verde original, aplicamos el tinte para mantener el estilo
-        if (savedTheme === 'bg_green') {
+        if (savedTheme === ASSET_KEYS.IMAGES.BG_GREEN) {
             this.bgStatic.setTint(0x88ff88);
         }
 
@@ -46,22 +45,98 @@ export class BackgroundScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
-    }
 
-    /**
-     * Cambia el fondo en tiempo real desde SettingsScene
-     */
-    changeBackground(textureKey) {
-        if (this.bgStatic) {
-            this.bgStatic.setTexture(textureKey);
-            // Re-aplicar tinte solo si es el verde
-            if (textureKey === 'bg_green') {
-                this.bgStatic.setTint(0x88ff88);
-            } else {
-                this.bgStatic.clearTint();
-            }
+        // Crear animación de Estrella de Campaña
+        if (!this.anims.exists(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_STAR)) {
+            this.anims.create({
+                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_STAR,
+                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.CAMPAIGN_STAR, { start: 0, end: 99 }),
+                frameRate: 20,
+                repeat: -1
+            });
         }
+        
+        // Crear animación de Galaxia Púrpura
+        if (!this.anims.exists(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_GALAXY_PURPLE)) {
+            this.anims.create({
+                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_GALAXY_PURPLE,
+                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.CAMPAIGN_GALAXY_PURPLE, { start: 0, end: 399 }),
+                frameRate: 20,
+                repeat: -1
+            });
+        }
+        
+        // Crear animación de Agujero Negro
+        if (!this.anims.exists(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE)) {
+            this.anims.create({
+                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE,
+                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.CAMPAIGN_BLACKHOLE, { start: 0, end: 224 }),
+                frameRate: 15,
+                repeat: -1
+            });
+        }
+        
+        // Sprite contenedor para la estrella (oculto por defecto)
+        this.campaignStar = this.add.sprite(width / 2, height / 2, ASSET_KEYS.SPRITESHEETS.CAMPAIGN_STAR)
+            .setAlpha(0)
+            .setScale(4) 
+            .play(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_STAR);
+        
+        // Sprite contenedor para la galaxia púrpura
+        this.campaignGalaxy = this.add.sprite(width / 2, height / 2, ASSET_KEYS.SPRITESHEETS.CAMPAIGN_GALAXY_PURPLE)
+            .setAlpha(0)
+            .setScale(8)
+            .play(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_GALAXY_PURPLE);
+
+        // Sprite contenedor para el agujero negro
+        this.campaignBlackhole = this.add.sprite(width / 2, height / 2, ASSET_KEYS.SPRITESHEETS.CAMPAIGN_BLACKHOLE)
+            .setAlpha(0)
+            .setScale(4) // Ajustado a 4
+            .play(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE);
     }
+        
+        
+        
+        
+        
+            changeBackground(textureKey) {
+                if (this.bgStatic) {
+                    this.bgStatic.setVisible(true);
+                    // Always set the static background to the hard campaign background
+                    this.bgStatic.setTexture(ASSET_KEYS.IMAGES.BG_CAMPAIGN_HARD);
+                    this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
+                    
+                    // Ensure no tint from previous states
+                    this.bgStatic.clearTint();
+
+                    // --- GESTIÓN DE ELEMENTOS DE CAMPAÑA ---
+                    // 1. Galaxia Nivel 1 (show if textureKey was originally easy)
+                    this.campaignGalaxy.setAlpha(textureKey === ASSET_KEYS.IMAGES.BG_CAMPAIGN_EASY ? 1 : 0);
+                    
+                    // 2. Estrella Nivel 2 (show if textureKey was originally medium)
+                    this.campaignStar.setAlpha(textureKey === ASSET_KEYS.IMAGES.BG_CAMPAIGN_MEDIUM ? 1 : 0);
+
+                    // 3. Agujero Negro Nivel 3 (show if textureKey was originally hard)
+                    this.campaignBlackhole.setAlpha(textureKey === ASSET_KEYS.IMAGES.BG_CAMPAIGN_HARD ? 1 : 0);
+                }
+            }
+
+            /**
+             * Aplica un efecto de oscurecimiento al fondo.
+             * @param {boolean} enabled Si el oscurecimiento debe estar activado.
+             */
+            applyDim(enabled) {
+                // Podríamos usar un graphics overlay, o simplemente un alpha en la cámara principal.
+                // Para simplificar, ajustaremos el alpha del bgStatic y otros elementos.
+                // Opcional: Podríamos tener un Graphics overlay que se activa/desactiva.
+                // Por ahora, ajustaremos el alpha general de la cámara
+                const alphaTarget = enabled ? 0.4 : 1; // 0.4 para oscurecer, 1 para normal
+                this.tweens.add({
+                    targets: this.cameras.main,
+                    alpha: alphaTarget,
+                    duration: 300
+                });
+            }
 
     update(time, delta) {
         /*

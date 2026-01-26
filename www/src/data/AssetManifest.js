@@ -24,7 +24,10 @@ export const ASSETS = {
             { key: 'v3_bg', path: 'assets/v3_space.png' },
             { key: 'bg_green', path: 'assets/backgrounds/bg_green.png' },
             { key: 'bg_purple', path: 'assets/backgrounds/background2-morado.png' },
-            { key: 'bg_blue', path: 'assets/backgrounds/background3-azul.png' }
+            { key: 'bg_blue', path: 'assets/backgrounds/background3-azul.png' },
+            { key: 'bg_campaign_easy', path: 'assets/backgrounds/bg_campaign_easy.png' },
+            { key: 'bg_campaign_medium', path: 'assets/backgrounds/bg_campaign_medium.png' },
+            { key: 'bg_campaign_hard', path: 'assets/backgrounds/bg_campaign_hard.png' }
         ],
         AVATARS: [
             { key: 'avatar_human_1', path: 'assets/avatars/human_1.png' },
@@ -34,7 +37,24 @@ export const ASSETS = {
             { key: 'avatar_alien_2', path: 'assets/avatars/alien_2.png' },
             { key: 'avatar_alien_3', path: 'assets/avatars/alien_3.png' },
             { key: 'avatar_alien_4', path: 'assets/avatars/alien_4.png' },
-            { key: 'avatar_alien_5', path: 'assets/avatars/alien_5.png' }
+            { key: 'avatar_alien_5', path: 'assets/avatars/alien_5.png' },
+            { key: 'avatar_octavius', path: 'assets/avatars/alien2_Octavius.png' },
+            { key: 'avatar_raptor', path: 'assets/avatars/alien3_raptor.png' },
+            { key: 'avatar_echo', path: 'assets/avatars/alien4_Echo.png' },
+            { key: 'avatar_oscar', path: 'assets/avatars/alien5_oscar.png' },
+            { key: 'avatar_michael', path: 'assets/avatars/navegante-0_Michael.png' },
+            { key: 'avatar_mateo', path: 'assets/avatars/navegante-1_Mateo.png' },
+            { key: 'avatar_john', path: 'assets/avatars/navegante-2_John.png' }
+        ],
+        PLAYER_PROFILES: [ // NUEVA CATEGORÍA
+            { key: 'player_avatar_alien_1', path: 'assets/player_avatars/alien-1.png' },
+            { key: 'player_avatar_alien_2', path: 'assets/player_avatars/alien2.png' },
+            { key: 'player_avatar_alien_3', path: 'assets/player_avatars/alien3.png' },
+            { key: 'player_avatar_alien_4', path: 'assets/player_avatars/alien4.png' },
+            { key: 'player_avatar_alien_5', path: 'assets/player_avatars/alien5.png' },
+            { key: 'player_avatar_michael', path: 'assets/player_avatars/navegante-0.png' },
+            { key: 'player_avatar_mateo', path: 'assets/player_avatars/navegante-1.png' },
+            { key: 'player_avatar_john', path: 'assets/player_avatars/navegante-2.png' }
         ]
     },
     SPRITESHEETS: [
@@ -62,6 +82,21 @@ export const ASSETS = {
             key: 'planet_zorg', 
             path: 'assets/planets/zorg_planet_400.png',
             config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
+        },
+        { 
+            key: 'campaign_star', 
+            path: 'assets/backgrounds/campaign_star.png',
+            config: { frameWidth: 200, frameHeight: 200, startFrame: 0, endFrame: 99, margin: 5, spacing: 5 }
+        },
+        { 
+            key: 'campaign_galaxy_purple', 
+            path: 'assets/backgrounds/campaign_galaxy_purple.png',
+            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
+        },
+        { 
+            key: 'campaign_blackhole', 
+            path: 'assets/backgrounds/campaign_blackhole.png',
+            config: { frameWidth: 200, frameHeight: 200, startFrame: 0, endFrame: 224, margin: 4, spacing: 4 }
         }
     ]
 };

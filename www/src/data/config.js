@@ -62,7 +62,9 @@ export const CONFIG = {
             TEXT_LIGHT: this.THEME.ACCENT_STR,
             TEXT_DARK: '#1a1a1a',
             BG_DARK: this.THEME.BG,
-            UI_OVERLAY: 0x000000
+            UI_OVERLAY: 0x000000,
+            AI_THINKING_RED: 0xFF0000, // Rojo para cuando la IA está "pensando"
+            AI_READY_GREEN: 0x00FF00   // Verde para cuando la IA ya ha elegido
         };
     },
 

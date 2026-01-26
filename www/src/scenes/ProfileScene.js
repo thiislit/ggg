@@ -1,10 +1,10 @@
-import { Storage } from '../managers/Storage.js';
+import { DataManager } from '../managers/DataManager.js';
 import { CONFIG } from '../data/config.js';
 import { AudioManager } from '../managers/AudioManager.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
 import { GAME_DATA } from '../data/GameData.js';
 import { RetroButton } from '../ui/components/RetroButton.js';
 import { ArrowSelector } from '../ui/components/ArrowSelector.js';
+import { ASSET_KEYS } from '../constants/AssetKeys.js';
 
 export class ProfileScene extends Phaser.Scene {
     constructor() {
@@ -34,7 +34,7 @@ export class ProfileScene extends Phaser.Scene {
         let currentY = height * 0.20;
         const P = GAME_DATA.PLANETS;
         this.planets = [P.EARTH, P.MARS, P.KEPLER, P.NEBULA];
-        let savedPlanet = PlayerManager.getPlanet();
+        let savedPlanet = DataManager.getPlanet();
         this.planetIdx = Math.max(0, this.planets.indexOf(savedPlanet));
 
         this.planetNameTxt = this.add.text(centerX, currentY - 90, `HOME: ${this.planets[this.planetIdx]}`, {
@@ -50,20 +50,20 @@ export class ProfileScene extends Phaser.Scene {
         
         const initialPlanet = this.planets[this.planetIdx];
         const planetConfigs = {
-            [P.EARTH]: { texture: 'planet_tierra', anim: 'anim_earth' },
-            [P.MARS]: { texture: 'planet_mars', anim: 'anim_mars' },
-            [P.KEPLER]: { texture: 'planet_kepler', anim: 'anim_kepler' },
-            [P.NEBULA]: { texture: 'planet_nebula', anim: 'anim_nebula' },
-            [P.ZORGTROPOLIS]: { texture: 'planet_zorg', anim: 'anim_zorg_planet' }
+            [P.EARTH]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, anim: ASSET_KEYS.ANIMATIONS.ANIM_EARTH },
+            [P.MARS]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS, anim: ASSET_KEYS.ANIMATIONS.ANIM_MARS },
+            [P.KEPLER]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER, anim: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER },
+            [P.NEBULA]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA, anim: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA },
+            [P.ZORGTROPOLIS]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG, anim: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET }
         };
 
         this.planetPreview = this.add.sprite(centerX, currentY, planetConfigs[initialPlanet].texture)
             .setDisplaySize(100, 100)
-            .play(initialPlanet === P.EARTH ? 'planet_rotate' : planetConfigs[initialPlanet].anim);
+            .play(initialPlanet === P.EARTH ? ASSET_KEYS.ANIMATIONS.PLANET_ROTATE : planetConfigs[initialPlanet].anim);
 
         // --- SECCIÓN B: NOMBRE (TEXTO EDITABLE CON BOTÓN OK) ---
         currentY += 160; 
-        const name = PlayerManager.getName();
+        const name = DataManager.getName();
         
         // Etiqueta arriba
         this.add.text(centerX, currentY - 50, "CODENAME", {
@@ -119,7 +119,7 @@ export class ProfileScene extends Phaser.Scene {
 
         // Acción al pulsar el botón OK o el fondo del nombre
         const triggerEdit = () => {
-            AudioManager.playSFX(this, 'sfx_button');
+            AudioManager.playSFX(this, ASSET_KEYS.AUDIO.SFX_BUTTON);
             this.tweens.add({ targets: okBtn, scale: 0.9, duration: 80, yoyo: true });
             this.startEditingName();
         };
@@ -136,17 +136,42 @@ export class ProfileScene extends Phaser.Scene {
             }
         });
 
-        // --- SECCIÓN C: AVATAR (CAMPO CUADRADO) ---
-        currentY += 180; 
-        const A = GAME_DATA.AVATARS;
-        this.avatars = [
-            A.HUMAN_1, A.HUMAN_2, A.HUMAN_3,
-            A.ALIEN_2, A.ALIEN_3, A.ALIEN_4, A.ALIEN_5
-        ];
-        let savedAvatar = PlayerManager.getAvatar();
-        this.avatarIdx = Math.max(0, this.avatars.indexOf(savedAvatar));
-
-        this.add.text(centerX, currentY - 130, "UNIT APPEARANCE", {
+                // --- SECCIÓN C: AVATAR (CAMPO CUADRADO) ---
+                currentY += 180;
+                const A = ASSET_KEYS.IMAGES; // Usar ASSET_KEYS.IMAGES directamente
+                
+                        console.log("DataManager.hasCompletedStory():", DataManager.hasCompletedStory());
+                        let allPlayerAvatars = [
+                            A.PLAYER_AVATAR_ALIEN_2,
+                            A.PLAYER_AVATAR_ALIEN_3,
+                            A.PLAYER_AVATAR_ALIEN_4,
+                            A.PLAYER_AVATAR_ALIEN_5,
+                            A.PLAYER_AVATAR_MICHAEL,
+                            A.PLAYER_AVATAR_MATEO,
+                            A.PLAYER_AVATAR_JOHN
+                        ];
+                
+                        // Añadir el avatar de Zorg (alien-1) si la historia está completada
+                        if (DataManager.hasCompletedStory()) {
+                            allPlayerAvatars.unshift(A.PLAYER_AVATAR_ALIEN_1); // Añadir al principio
+                        }
+                        
+                        this.avatars = allPlayerAvatars;
+                        console.log("Available avatars in ProfileScene:", this.avatars);
+                        let savedAvatar = DataManager.getAvatar();
+                        console.log("Saved avatar:", savedAvatar);
+                
+                        // Asegurarse de que el avatar guardado sea válido para la selección actual
+                        let initialAvatarIndex = this.avatars.indexOf(savedAvatar);
+                        if (initialAvatarIndex === -1) {
+                            // Si el avatar guardado no está disponible (ej. alien-1 antes de completar historia)
+                            // o si es un avatar que no existe, seleccionamos el primer avatar disponible.
+                            initialAvatarIndex = 0;
+                            // También actualizamos el DataManager para que refleje el avatar disponible
+                            DataManager.setAvatar(this.avatars[initialAvatarIndex]);
+                        }
+                        this.avatarIdx = initialAvatarIndex;
+                        console.log("Initial avatar index:", this.avatarIdx, "Avatar selected:", this.avatars[this.avatarIdx]);        this.add.text(centerX, currentY - 130, "UNIT APPEARANCE", {
             fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.PRIMARY_STR
         }).setOrigin(0.5);
 
@@ -157,13 +182,13 @@ export class ProfileScene extends Phaser.Scene {
         }, (dir) => this.updateAvatar(dir));
         
         this.avatarPreview = this.add.image(centerX, currentY, this.avatars[this.avatarIdx])
-            .setDisplaySize(180, 180);
+            .setScale(0.4);
 
         // --- SECCIÓN D: ESPECIE (TEXTO CON FLECHAS) ---
         currentY += 200; 
         const S = GAME_DATA.SPECIES;
         this.speciesList = [S.CYBORG, S.HUMAN, S.ALIEN];
-        let savedSpecies = PlayerManager.getSpecies();
+        let savedSpecies = DataManager.getSpecies();
         this.speciesIdx = Math.max(0, this.speciesList.indexOf(savedSpecies));
 
         this.add.text(centerX, currentY - 45, "BIOLOGICAL TYPE", {
@@ -177,18 +202,14 @@ export class ProfileScene extends Phaser.Scene {
         new ArrowSelector(this, centerX, currentY, { distance: 130 }, (dir) => this.updateSpecies(dir));
 
         // --- BOTÓN FINAL (Usando Componente Reutilizable) ---
-        // Si venimos de la historia, el botón dice "CONFIRM IDENTITY" y vuelve a la historia
         const btnText = this.fromStory ? "CONFIRM IDENTITY" : "CONFIRM PROFILE";
         const btnAction = () => {
-            // Guardar cambios (ya se hace en cada update, pero aseguramos)
             const finalName = this.nameTxt.text.trim() || "PLAYER 1";
-            PlayerManager.setName(finalName);
+            DataManager.setName(finalName);
             
             if (this.fromStory) {
-                // Volver a la historia para terminarla
                 this.scene.start('StoryScene', { resume: true });
             } else {
-                // Ir al menú normal
                 this.scene.start('MainMenuScene');
             }
         };
@@ -244,28 +265,28 @@ export class ProfileScene extends Phaser.Scene {
         this.cursor.setVisible(false);
         const finalName = this.nameTxt.text.trim() || "PLAYER 1";
         this.nameTxt.setText(finalName);
-        PlayerManager.setName(finalName);
+        DataManager.setName(finalName);
     }
 
     updatePlanet(dir) {
         this.planetIdx = (this.planetIdx + dir + this.planets.length) % this.planets.length;
         const p = this.planets[this.planetIdx];
         this.planetNameTxt.setText(`HOME: ${p}`);
-        PlayerManager.setPlanet(p);
+        DataManager.setPlanet(p);
         
         const P = GAME_DATA.PLANETS;
         const planetConfigs = {
-            [P.EARTH]: { texture: 'planet_tierra', anim: 'anim_earth' },
-            [P.MARS]: { texture: 'planet_mars', anim: 'anim_mars' },
-            [P.KEPLER]: { texture: 'planet_kepler', anim: 'anim_kepler' },
-            [P.NEBULA]: { texture: 'planet_nebula', anim: 'anim_nebula' },
-            [P.ZORGTROPOLIS]: { texture: 'planet_zorg', anim: 'anim_zorg_planet' }
+            [P.EARTH]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, anim: ASSET_KEYS.ANIMATIONS.ANIM_EARTH },
+            [P.MARS]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS, anim: ASSET_KEYS.ANIMATIONS.ANIM_MARS },
+            [P.KEPLER]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER, anim: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER },
+            [P.NEBULA]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA, anim: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA },
+            [P.ZORGTROPOLIS]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG, anim: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET }
         };
         
         const config = planetConfigs[p];
         if (config) {
             this.planetPreview.setTexture(config.texture);
-            this.planetPreview.play(p === P.EARTH ? 'planet_rotate' : config.anim);
+            this.planetPreview.play(p === P.EARTH ? ASSET_KEYS.ANIMATIONS.PLANET_ROTATE : config.anim);
         }
         
         this.tweens.add({ targets: this.planetPreview, scale: 1.2, duration: 150, yoyo: true });
@@ -275,15 +296,15 @@ export class ProfileScene extends Phaser.Scene {
         this.avatarIdx = (this.avatarIdx + dir + this.avatars.length) % this.avatars.length;
         const a = this.avatars[this.avatarIdx];
         this.avatarPreview.setTexture(a);
-        PlayerManager.setAvatar(a);
-        this.tweens.add({ targets: this.avatarPreview, scale: 0.8, duration: 100, yoyo: true });
+        DataManager.setAvatar(a);
+        this.tweens.add({ targets: this.avatarPreview, scale: 0.5, duration: 100, yoyo: true, onComplete: () => this.avatarPreview.setScale(0.4) });
     }
 
     updateSpecies(dir) {
         this.speciesIdx = (this.speciesIdx + dir + this.speciesList.length) % this.speciesList.length;
         const s = this.speciesList[this.speciesIdx];
         this.speciesTxt.setText(s);
-        PlayerManager.setSpecies(s);
+        DataManager.setSpecies(s);
         this.tweens.add({ targets: this.speciesTxt, scale: 1.2, duration: 100, yoyo: true });
     }
 }

@@ -12,13 +12,13 @@ export const GAME_DATA = {
         ALIEN: 'ALIEN'
     },
     AVATARS: {
-        HUMAN_1: 'avatar_human_1',
-        HUMAN_2: 'avatar_human_2',
-        HUMAN_3: 'avatar_human_3',
-        ALIEN_2: 'avatar_alien_2',
-        ALIEN_3: 'avatar_alien_3',
-        ALIEN_4: 'avatar_alien_4',
-        ALIEN_5: 'avatar_alien_5',
-        ZORG: 'avatar_zorg'
+        PLAYER_AVATAR_ALIEN_1: 'player_avatar_alien_1',
+        PLAYER_AVATAR_ALIEN_2: 'player_avatar_alien_2',
+        PLAYER_AVATAR_ALIEN_3: 'player_avatar_alien_3',
+        PLAYER_AVATAR_ALIEN_4: 'player_avatar_alien_4',
+        PLAYER_AVATAR_ALIEN_5: 'player_avatar_alien_5',
+        PLAYER_AVATAR_MICHAEL: 'player_avatar_michael',
+        PLAYER_AVATAR_MATEO: 'player_avatar_mateo',
+        PLAYER_AVATAR_JOHN: 'player_avatar_john'
     }
 };

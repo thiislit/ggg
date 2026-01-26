@@ -1,15 +1,15 @@
 import { CONFIG } from '../data/config.js';
-import { PlayerManager } from '../managers/PlayerManager.js';
+import { DataManager } from '../managers/DataManager.js';
 import { OPPONENTS } from '../data/Opponents.js';
 import { AudioManager } from '../managers/AudioManager.js';
-import { Storage } from '../managers/Storage.js';
 import { RetroButton } from './components/RetroButton.js';
 import { HeartBar } from './components/HeartBar.js';
 import { LAYOUT } from '../data/Layout.js';
 
 export class CombatUI {
-    constructor(scene) {
+    constructor(scene, enemy) { // Add enemy parameter
         this.scene = scene;
+        this.enemy = enemy; // Store enemy
         this.elements = {}; // Almacén para referencias de Phaser
     }
 
@@ -55,12 +55,11 @@ export class CombatUI {
     // --- HUD (CARTAS DE PERFIL Y CORAZONES) ---
     initHUD(p1X, p2X, baseY, heartsY) {
         // Player 1
-        this.elements.p1Profile = this.createProfileCard(p1X, baseY, PlayerManager.getName(), PlayerManager.getPlanet(), true, heartsY);
+        this.elements.p1Profile = this.createProfileCard(p1X, baseY, DataManager.getName(), DataManager.getPlanet(), true, heartsY);
         this.elements.p1Hearts = new HeartBar(this.scene, p1X, heartsY);
         
-        // CPU (ZORG)
-        const enemy = OPPONENTS.ZORG;
-        this.elements.p2Profile = this.createProfileCard(p2X, baseY, enemy.name, enemy.planet.name, false, heartsY);
+        // CPU
+        this.elements.p2Profile = this.createProfileCard(p2X, baseY, this.enemy.name, this.enemy.planet.name, false, heartsY);
         this.elements.p2Hearts = new HeartBar(this.scene, p2X, heartsY);
     }
 
@@ -84,14 +83,13 @@ export class CombatUI {
             'EARTH': { texture: 'planet_tierra', anim: 'anim_earth' },
             'MARS': { texture: 'planet_mars', anim: 'anim_mars' },
             'KEPLER': { texture: 'planet_kepler', anim: 'anim_kepler' },
-            'NEBULA': { texture: 'planet_nebula', anim: 'anim_nebula' },
-            'ZORGTROPOLIS': { texture: 'planet_zorg', anim: 'anim_zorg_planet' }
+            'NEBULA': { texture: 'planet_nebula', anim: 'anim_nebula' }
         };
 
         const pKey = planet.toUpperCase();
-        let config = planetConfigs[pKey] || planetConfigs['EARTH'];
-        if (pKey === OPPONENTS.ZORG.planet.name) config = OPPONENTS.ZORG.planet;
-
+        // If it's CPU, use the enemy's planet config
+        let config = (this.enemy && pKey === this.enemy.planet.name) ? this.enemy.planet : (planetConfigs[pKey] || planetConfigs['EARTH']);
+        
         const planetSprite = this.scene.add.sprite(0, planetCenterY, config.texture)
             .setDisplaySize(planetSize * 0.9, planetSize * 0.9) 
             .play(config.anim);
@@ -100,7 +98,8 @@ export class CombatUI {
             fontFamily: CONFIG.FONTS.MAIN, fontSize: '14px', fill: CONFIG.THEME.primaryStr 
         }).setOrigin(0.5);
 
-        const species = isP1 ? PlayerManager.getSpecies() : OPPONENTS.ZORG.species;
+        // Use this.enemy.species for CPU
+        const species = isP1 ? DataManager.getSpecies() : (this.enemy ? this.enemy.species : '');
         const speciesTxt = this.scene.add.text(0, speciesY, `SPECIES: ${species}`, { 
             fontFamily: CONFIG.FONTS.MAIN, fontSize: '8px', fill: CONFIG.THEME.secondaryStr 
         }).setOrigin(0.5).setAlpha(0.7); 
@@ -125,12 +124,10 @@ export class CombatUI {
 
     // --- AVATARES ---
     initAvatars(p1X, p2X, y) {
-        const frameW = 220; const frameH = 220;
-        
         // P1
-        this.elements.p1Avatar = this.createSingleAvatar(p1X, y, PlayerManager.getAvatar(), true);
+        this.elements.p1Avatar = this.createSingleAvatar(p1X, y, DataManager.getAvatar(), true);
         // CPU
-        this.elements.p2Avatar = this.createSingleAvatar(p2X, y, OPPONENTS.ZORG.avatar, false);
+        this.elements.p2Avatar = this.createSingleAvatar(p2X, y, this.enemy.avatar, false);
         
         [this.elements.p1Avatar, this.elements.p2Avatar].forEach((container, i) => {
             this.scene.tweens.add({ targets: container, y: '+=5', duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: i * 500 });
@@ -145,9 +142,16 @@ export class CombatUI {
         bg.fillRoundedRect(-frameW/2, -frameH/2, frameW, frameH, 10);
         bg.strokeRoundedRect(-frameW/2, -frameH/2, frameW, frameH, 10);
         
-        const avatar = this.scene.add.image(0, 0, key);
-        const scale = Math.min((frameW - 20) / avatar.width, (frameH - 20) / avatar.height);
-        avatar.setScale(scale);
+        let avatar;
+        if (this.scene.textures.exists(key)) {
+            avatar = this.scene.add.image(0, 0, key);
+            const scale = Math.min((frameW - 20) / avatar.width, (frameH - 20) / avatar.height);
+            avatar.setScale(scale);
+            avatar.setAlpha(1).setVisible(true); // Asegurar visibilidad
+        } else {
+            console.warn(`AssetKey missing for avatar: ${key}. Using placeholder.`);
+            avatar = this.scene.add.text(0, 0, '?', { fontSize: '60px', fill: '#FF0000' }).setOrigin(0.5); // Placeholder
+        }
         container.add([bg, avatar]);
         return container;
     }
@@ -241,8 +245,11 @@ export class CombatUI {
             this.scene.sound.mute = nextState;
             this.elements.muteBtn.setText(nextState ? '🔇' : '🔊');
             this.scene.tweens.add({ targets: this.elements.muteBtn, scale: 1.4, duration: 100, yoyo: true });
-            Storage.set('isMuted', nextState);
+            DataManager.setIsMuted(nextState);
         });
+        
+        // Indicador de la IA (posición inicial arbitraria, GameScene lo posicionará)
+        this.elements.aiIndicator = this.scene.add.circle(0, 0, 10, CONFIG.COLORS.AI_THINKING_RED).setDepth(5000).setOrigin(0.5);
 
         // Switch
         this.elements.switchBtn = this.scene.add.text(width / 2, height - LAYOUT.CONTROLS.SWITCH_Y_OFFSET, '⇄', { 
@@ -401,6 +408,7 @@ export class CombatUI {
         const p2Emoji = this.elements.p2Emoji;
 
         p1Emoji.setAngle(p1StartAngle).setOrigin(0.5, 1);
+    
         p2Emoji.setAngle(p2StartAngle).setOrigin(0.5, 1);
 
         const { width } = this.scene.scale;
@@ -417,7 +425,7 @@ export class CombatUI {
 
         this.scene.tweens.add({
             targets: p1Emoji,
-            angle: p1StartAngle - 90,
+            angle: p1Emoji.flipX ? (p1StartAngle - 90) : (p1StartAngle + 90), // Ajuste de rotación para flipX
             duration: 150,
             yoyo: true,
             repeat: 2,
@@ -430,7 +438,7 @@ export class CombatUI {
 
         this.scene.tweens.add({
             targets: p2Emoji,
-            angle: p2StartAngle + 90,
+            angle: p2Emoji.flipX ? (p2StartAngle - 90) : (p2StartAngle + 90), // Usando la misma lógica condicional que p1Emoji
             duration: 150,
             yoyo: true,
             repeat: 2,
@@ -511,9 +519,22 @@ export class CombatUI {
 
     hideResultText() {
          // Resetear textos de estado
-         if (this.elements.p1NameTxt) this.elements.p1NameTxt.setText(PlayerManager.getName()).setFill(CONFIG.THEME.primaryStr).setScale(1);
-         if (this.elements.p2NameTxt) this.elements.p2NameTxt.setText(OPPONENTS.ZORG.name).setFill(CONFIG.THEME.primaryStr).setScale(1);
+         if (this.elements.p1NameTxt) this.elements.p1NameTxt.setText(DataManager.getName()).setFill(CONFIG.THEME.primaryStr).setScale(1);
+         if (this.elements.p2NameTxt) this.elements.p2NameTxt.setText(this.enemy.name).setFill(CONFIG.THEME.primaryStr).setScale(1);
          this.elements.p1X.setAlpha(0);
          this.elements.p2X.setAlpha(0);
+    }
+
+    // --- INDICADOR DE IA ---
+    updateAIIndicator(color) {
+        if (this.elements.aiIndicator) {
+            this.elements.aiIndicator.setFillStyle(color);
+        }
+    }
+
+    resetAIIndicator() {
+        if (this.elements.aiIndicator) {
+            this.elements.aiIndicator.setFillStyle(CONFIG.COLORS.AI_THINKING_RED);
+        }
     }
 }

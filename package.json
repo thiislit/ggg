@@ -4,7 +4,7 @@
   "description": "Juego retro de Piedra Papel o Tijera",
   "main": "src/main.js",
   "scripts": {
-    "sync": "powershell -Command \"Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; npx cap sync\"",
+    "sync": "powershell -Command \"Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass\" && npx cap sync",
     "force-android": "powershell -Command \"cd android; .\\gradlew installDebug\"",
     "update": "npm run sync && npm run force-android",
     "test": "echo \"Error: no test specified\" && exit 1"
