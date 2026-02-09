@@ -46,35 +46,7 @@ export class BackgroundScene extends Phaser.Scene {
             ease: 'Sine.easeInOut'
         });
 
-        // Crear animación de Estrella de Campaña
-        if (!this.anims.exists(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_STAR)) {
-            this.anims.create({
-                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_STAR,
-                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.CAMPAIGN_STAR, { start: 0, end: 99 }),
-                frameRate: 20,
-                repeat: -1
-            });
-        }
-        
-        // Crear animación de Galaxia Púrpura
-        if (!this.anims.exists(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_GALAXY_PURPLE)) {
-            this.anims.create({
-                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_GALAXY_PURPLE,
-                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.CAMPAIGN_GALAXY_PURPLE, { start: 0, end: 399 }),
-                frameRate: 20,
-                repeat: -1
-            });
-        }
-        
-        // Crear animación de Agujero Negro
-        if (!this.anims.exists(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE)) {
-            this.anims.create({
-                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE,
-                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.CAMPAIGN_BLACKHOLE, { start: 0, end: 224 }),
-                frameRate: 15,
-                repeat: -1
-            });
-        }
+        // Animaciones creadas globalmente en SplashScene
         
         // Sprite contenedor para la estrella (oculto por defecto)
         this.campaignStar = this.add.sprite(width / 2, height / 2, ASSET_KEYS.SPRITESHEETS.CAMPAIGN_STAR)

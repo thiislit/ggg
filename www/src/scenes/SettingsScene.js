@@ -102,7 +102,7 @@ export class SettingsScene extends Phaser.Scene {
             bgIdx = (bgIdx + dir + bgThemes.length) % bgThemes.length;
             const theme = bgThemes[bgIdx];
             DataManager.setBgTheme(theme.id);
-            CONFIG.THEME.setFromPalette(theme.id);
+
             this.themeValue.setText(theme.name);
             const bgScene = this.scene.get('BackgroundScene');
             if (bgScene && bgScene.changeBackground) bgScene.changeBackground(theme.id);

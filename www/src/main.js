@@ -6,6 +6,7 @@ import { SettingsScene } from './scenes/SettingsScene.js';
 import { BackgroundScene } from './scenes/BackgroundScene.js';
 import { ProfileScene } from './scenes/ProfileScene.js';
 import { StoryScene } from './scenes/StoryScene.js';
+import { EpilogueScene } from './scenes/EpilogueScene.js'; // Importar la nueva escena
 import { DataManager } from './managers/DataManager.js'; // NEW IMPORT
 import { GAME_WIDTH, GAME_HEIGHT } from './constants/game.js';
 
@@ -20,7 +21,7 @@ const config = {
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
     // El orden importa: SplashScene arranca primero y ella lanza el background
-    scene: [SplashScene, StoryScene, BackgroundScene, ProfileScene, MainMenuScene, GameScene, GameOverScene, SettingsScene]
+    scene: [SplashScene, StoryScene, BackgroundScene, ProfileScene, MainMenuScene, GameScene, GameOverScene, SettingsScene, EpilogueScene]
 };
 
 const game = new Phaser.Game(config);

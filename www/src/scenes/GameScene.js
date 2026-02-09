@@ -7,9 +7,11 @@ import { OPPONENTS } from '../data/Opponents.js';
 import { DataManager } from '../managers/DataManager.js';
 import { CampaignManager } from '../managers/CampaignManager.js';
 import { CombatUI } from '../ui/CombatUI.js';
+import { CombatManager } from '../managers/CombatManager.js';
 import { DialogueBox } from '../ui/components/DialogueBox.js';
 import { LAYOUT } from '../data/Layout.js';
 import { ASSET_KEYS } from '../constants/AssetKeys.js';
+import { TutorialManager } from '../managers/TutorialManager.js'; // Import TutorialManager
 
 // --- MÁQUINA DE ESTADOS FINITA ---
 const GAME_STATE = {
@@ -34,6 +36,9 @@ export class GameScene extends Phaser.Scene {
         // Estado Inicial
         this.currentState = GAME_STATE.IDLE;
         this.isPlayerRight = false; // Se carga en create
+
+        this.currentOpponent = null; // Almacena el oponente actual para diálogos, etc.
+        this.shakeEvent = null; // Evento de temporizador para el shake continuo
     }
 
     // --- GESTIÓN DE ESTADO ---
@@ -41,8 +46,30 @@ export class GameScene extends Phaser.Scene {
         this.currentState = newState;
     }
 
+    // --- MANEJO DE VIBRACIÓN CONTINUA ---
+    startContinuousShake() {
+        if (this.shakeEvent) return; // Already shaking
+
+        // Iniciar un evento repetido que agite la cámara
+        this.shakeEvent = this.time.addEvent({
+            delay: 300, // Duración de cada sacudida individual
+            callback: () => {
+                this.cameras.main.shake(300, 0.02);
+            },
+            loop: true
+        });
+    }
+
+    stopContinuousShake() {
+        if (this.shakeEvent) {
+            this.shakeEvent.destroy();
+            this.shakeEvent = null;
+        }
+        this.cameras.main.shakeEffect.reset(); // Asegurarse de detener cualquier sacudida en progreso
+    }
+
     async create() {
-        let enemy; // Declare enemy here
+        let enemy = OPPONENTS.ZORG; // Initialize with a default valid enemy
 
         // Cargar Datos
         this.playerName = DataManager.getName();
@@ -96,12 +123,8 @@ export class GameScene extends Phaser.Scene {
             if (bgScene) bgScene.changeBackground(selectedBg);
         }
 
-        // Asegurarse de que 'enemy' sea un objeto válido con una propiedad 'avatar'
-        if (!enemy || !enemy.avatar) {
-            console.warn("Invalid enemy object provided to CombatUI. Using ZORG as fallback.");
-            enemy = OPPONENTS.ZORG; 
-        }
         this.ui = new CombatUI(this, enemy); // Pass enemy here!
+        this.currentOpponent = enemy; // Store the determined enemy for later use, e.g., dialogues
 
         // Reset de Partida
         this.p1Health = 3;
@@ -125,9 +148,8 @@ export class GameScene extends Phaser.Scene {
         this.nextRondaBtn = this.ui.createNextRondaBtn("PLAY", this.barY);
         this.setupNextRoundBtnListeners();
 
-        if (!DataManager.hasSeenTutorial()) {
-            this.showTutorial();
-        }
+        this.tutorialManager = new TutorialManager(this); // Instantiate TutorialManager
+        this.tutorialManager.checkTutorial(); // Call checkTutorial through the manager
     }
 
     buildGame() {
@@ -264,68 +286,39 @@ export class GameScene extends Phaser.Scene {
     showResults(p1, p2) {
         this.setState(GAME_STATE.RESULT);
 
-        let resultText = ""; 
-        let color = CONFIG.THEME.primaryStr;
-        let resultType = "LOSE"; // WIN, LOSE, DRAW
-        let soundKey = ASSET_KEYS.AUDIO.SFX_LOSE;
+        const outcome = CombatManager.getRoundResult(p1, p2);
 
-        // Reglas
-        if (p1 === -1) { 
-            resultText = "TIME'S UP!"; 
-            color = "#ff0000"; 
-            this.p1Health--; 
-            resultType = "LOSE";
-        } 
-        else if (p1 === p2) { 
-            resultText = "DRAW!"; 
-            resultType = "DRAW";
-            soundKey = ASSET_KEYS.AUDIO.SFX_TIE;
-        } 
-        else if ((p1 === 0 && p2 === 2) || (p1 === 1 && p2 === 0) || (p1 === 2 && p2 === 1)) { 
-            resultText = "YOU WIN!"; 
-            color = CONFIG.THEME.primaryStr; 
-            this.p2Health--; 
-            resultType = "WIN";
-            soundKey = ASSET_KEYS.AUDIO.SFX_WIN;
-        } 
-        else { 
-            resultText = "YOU LOSE!"; 
-            color = CONFIG.THEME.secondaryStr; 
-            this.p1Health--; 
-            resultType = "LOSE";
-        }
+        this.p1Health += outcome.playerHealthChange;
+        this.p2Health += outcome.cpuHealthChange;
 
         // Ejecutar efectos
-        AudioManager.playSFX(this, soundKey);
-        this.ui.playImpactEffect(color, resultType === 'WIN' ? 1.0 : 0.8);
+        AudioManager.playSFX(this, outcome.sound);
+        this.ui.playImpactEffect(outcome.color, outcome.result === 'WIN' ? 1.0 : 0.8);
 
         // Actualizar UI
-        this.ui.showRoundResult(p1, p2, resultType, this.p1Health, this.p2Health, resultText, color, () => {
-            // Callbacks post-resultado (Diálogos)
-            if (resultType === 'WIN') {
-                this.showDialogue(true, 'WIN'); this.showDialogue(false, 'LOSE');
-            } else if (resultType === 'DRAW') {
-                this.showDialogue(true, 'DRAW'); this.showDialogue(false, 'DRAW');
-            } else {
-                this.showDialogue(true, 'LOSE'); this.showDialogue(false, 'WIN');
+        this.ui.showRoundResult(p1, p2, outcome.result, this.p1Health, this.p2Health, outcome.text, outcome.color, () => {
+            // --- EFECTO DE VIBRACIÓN CONTINUA PARA NIVEL 3 DESPUÉS DE LA PRIMERA RONDA ---
+            if (outcome.result === 'WIN' && CampaignManager.isActive() && CampaignManager.state.currentLevel === 3 && CampaignManager.state.winsInRow === 1) {
+
+                this.startContinuousShake();
+            }
+            
+            // Decidir siguiente paso (Fatality o Nueva Ronda)
+            if (this.p2Health <= 0) {
+                this.time.delayedCall(500, () => this.triggerFatality(p1, this.p2Emoji, this.p1Emoji, true));
+            }
+            else if (this.p1Health <= 0) {
+                this.time.delayedCall(500, () => this.triggerFatality(p2, this.p1Emoji, this.p2Emoji, false));
+            }
+            else {
+                // Esperar un poco y mostrar botón NEXT
+                this.nextRoundTimer = this.time.delayedCall(800, () => {
+                    this.setState(GAME_STATE.IDLE); // Volvemos a IDLE
+                    this.nextRondaBtn = this.ui.createNextRondaBtn("NEXT", this.barY);
+                    this.setupNextRoundBtnListeners();
+                });
             }
         });
-
-        // Decidir siguiente paso (Fatality o Nueva Ronda)
-        if (this.p2Health <= 0) { 
-            this.time.delayedCall(500, () => this.triggerFatality(p1, this.p2Emoji, this.p1Emoji, true)); 
-        } 
-        else if (this.p1Health <= 0) { 
-            this.time.delayedCall(500, () => this.triggerFatality(p2, this.p1Emoji, this.p2Emoji, false)); 
-        } 
-        else { 
-            // Esperar un poco y mostrar botón NEXT
-            this.nextRoundTimer = this.time.delayedCall(1500, () => {
-                this.setState(GAME_STATE.IDLE); // Volvemos a IDLE
-                this.nextRondaBtn = this.ui.createNextRondaBtn("NEXT", this.barY);
-                this.setupNextRoundBtnListeners();
-            }); 
-        }
     }
 
     triggerFatality(choiceIndex, target, attacker, isPlayerWin) {
@@ -339,6 +332,7 @@ export class GameScene extends Phaser.Scene {
 
     async finishGame(isPlayerWin) {
         this.setState(GAME_STATE.GAME_OVER);
+        this.stopContinuousShake(); // Asegurarse de detener la vibración al finalizar el juego
 
         let campaignStatus = null;
 
@@ -348,23 +342,21 @@ export class GameScene extends Phaser.Scene {
                 const result = CampaignManager.registerWin();
                 campaignStatus = result.status;
             } else {
-                campaignStatus = CampaignManager.registerLoss().status;
+                const lossResult = CampaignManager.registerLoss();
+            campaignStatus = lossResult ? lossResult.status : null;
             }
         }
 
         // --- LÓGICA ESTÁNDAR (Racha) ---
         const winnerName = isPlayerWin ? this.playerName : this.cpuName;
-        let currentStreak = DataManager.getCurrentStreak();
-        let isNewRecord = false;
+        let streakData = { streak: 0, isNewRecord: false };
 
         if (!CampaignManager.isActive()) { // Solo contar racha en Quick Play
             if (isPlayerWin) {
-                currentStreak++;
-                isNewRecord = await DataManager.setBestStreak(currentStreak);
+                streakData = await DataManager.registerQuickPlayWin();
             } else {
-                currentStreak = 0;
+                await DataManager.registerQuickPlayLoss();
             }
-            await DataManager.setCurrentStreak(currentStreak);
         }
         
         this.tweens.add({
@@ -372,13 +364,15 @@ export class GameScene extends Phaser.Scene {
             alpha: 0,
             duration: CONFIG.TIMING.FADE_DURATION,
             onComplete: () => {
-                if (campaignStatus === 'CONTINUE_LEVEL') {
+                if (campaignStatus === 'CAMPAIGN_COMPLETE') {
+                    this.scene.start('EpilogueScene');
+                } else if (campaignStatus === 'CONTINUE_LEVEL') {
                     this.scene.restart(); 
                 } else {
                     this.scene.start('GameOverScene', { 
                         winner: winnerName, 
-                        streak: currentStreak,
-                        isNewRecord: isNewRecord,
+                        streak: streakData.streak,
+                        isNewRecord: streakData.isNewRecord,
                         campaignStatus: campaignStatus,
                         isCampaign: CampaignManager.isActive()
                     });
@@ -511,7 +505,8 @@ export class GameScene extends Phaser.Scene {
 
     getDialoguePhrase(speaker, type) {
         if (speaker === 'CPU') {
-            const enemy = OPPONENTS.ZORG; 
+            // Usar el oponente actualmente cargado en la escena
+            const enemy = this.currentOpponent; 
             const typeKey = type.toLowerCase();
             if (enemy.dialogues && enemy.dialogues[typeKey]) {
                 return enemy.dialogues[typeKey];
@@ -550,12 +545,18 @@ export class GameScene extends Phaser.Scene {
         
         this.ui.applyTheme();
         
-        if (this.p1ButtonsBg) {
-            this.p1ButtonsBg.forEach(bg => { if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, theme.PRIMARY); });
-        }
-        if (this.p2ButtonsBg) {
-            this.p2ButtonsBg.forEach(bg => { if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, theme.SECONDARY); });
-        }
+        this.p1Buttons.forEach(btn => {
+            if (btn) {
+                const bg = btn.list[0]; // Assuming the background is the first element in the container
+                if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, theme.PRIMARY);
+            }
+        });
+        this.p2Buttons.forEach(btn => {
+            if (btn) {
+                const bg = btn.list[0]; // Assuming the background is the first element in the container
+                if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, theme.SECONDARY);
+            }
+        });
         
         this.updateMuteIcon();
     }
@@ -595,30 +596,5 @@ export class GameScene extends Phaser.Scene {
         if (this.pauseOverlay) { this.pauseOverlay.destroy(); this.pauseOverlay = null; }
     }
 
-    checkTutorial() {
-        // Wrapper para tutorial
-        if (!DataManager.hasSeenTutorial()) {
-            this.showTutorial();
-        }
-    }
 
-    showTutorial() {
-        const { width, height } = this.scale;
-        this.tutorialContainer = this.add.container(0, 0).setDepth(3000);
-        const overlay = this.add.rectangle(0, 0, width, height, CONFIG.COLORS.BG_DARK, 0.8).setOrigin(0).setInteractive();
-        const style = { fontFamily: CONFIG.FONTS.MAIN, fontSize: '18px', fill: CONFIG.COLORS.TEXT_MAIN, align: 'center', wordWrap: { width: width * 0.8 } };
-        const text = this.add.text(width/2, height * 0.4, "CHOOSE YOUR WEAPON\nBEFORE TIME RUNS OUT!", style).setOrigin(0.5);
-        const btn = this.add.container(width/2, height * 0.6);
-        const bRect = this.add.rectangle(0, 0, 200, 60, CONFIG.COLORS.P1_BLUE).setStrokeStyle(2, 0xffffff).setInteractive({ useHandCursor: true });
-        const bText = this.add.text(0, 0, "GOT IT!", { fontFamily: CONFIG.FONTS.MAIN, fontSize: '16px' }).setOrigin(0.5);
-        btn.add([bRect, bText]);
-        bRect.on('pointerdown', async () => {
-            await DataManager.setTutorialSeen(true);
-            this.tweens.add({ targets: this.tutorialContainer, alpha: 0, duration: 300, onComplete: () => this.tutorialContainer.destroy() });
-        });
-        this.tutorialContainer.add([overlay, text, btn]);
-        const handEmoji = this.add.text(width/2, height * 0.8, "👆", { fontSize: '60px' }).setOrigin(0.5);
-        this.tutorialContainer.add(handEmoji);
-        this.tweens.add({ targets: handEmoji, y: '+=30', duration: 500, yoyo: true, repeat: -1 });
-    }
 }

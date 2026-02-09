@@ -84,6 +84,17 @@ export const CONFIG = {
     // Configuración de UI
     UI: {
         BUTTON_RADIUS: 15,      // Redondeo de esquinas
-        BORDER_WIDTH: 3         // Grosor de bordes
+        BORDER_WIDTH: 3,        // Grosor de bordes
+        
+        EPILOGUE: {
+            ZORG_SCALE: 1.2,
+            PRINCESS_SCALE: 0.8
+        },
+
+        DIALOGUE_BOX: {
+            FONT_SIZE: '16px',
+            LINE_SPACING: 8,
+            RADIUS: 10
+        }
     }
 };

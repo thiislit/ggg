@@ -7,7 +7,7 @@ export const CampaignManager = {
         isActive: false,      // ¿Estamos jugando modo historia?
         currentLevel: 1,      // 1: Easy, 2: Medium, 3: Hard
         winsInRow: 0,         // Victorias consecutivas actuales
-        targetWins: 2         // Meta para pasar de nivel
+        targetWins: 1         // Meta para pasar de nivel
     },
 
     // Definición de Niveles

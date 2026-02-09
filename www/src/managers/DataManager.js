@@ -1,5 +1,6 @@
 import { Storage } from './Storage.js';
 import { GAME_DATA } from '../data/GameData.js';
+import { CONFIG } from '../data/config.js'; // Import CONFIG
 
 // Claves de almacenamiento centralizadas
 const KEYS = {
@@ -108,6 +109,7 @@ export const DataManager = {
     async setBgTheme(themeId) {
         this.settings.bgTheme = themeId;
         await Storage.set(KEYS.BG_THEME, themeId);
+        CONFIG.THEME.setFromPalette(themeId); // Update global theme config
     },
     async setIsMuted(muted) {
         this.settings.isMuted = muted;
@@ -142,6 +144,21 @@ export const DataManager = {
     async setStoryCompleted(completed) { // Nuevo setter
         this.session.storyCompleted = completed;
         await Storage.set(KEYS.STORY_COMPLETED, completed);
+    },
+
+    // --- Lógica de Juego ---
+    async registerQuickPlayWin() {
+        const newStreak = this.session.currentStreak + 1;
+        this.session.currentStreak = newStreak;
+        await Storage.set(KEYS.CURRENT_STREAK, newStreak);
+
+        const isNewRecord = await this.setBestStreak(newStreak);
+        return { streak: newStreak, isNewRecord: isNewRecord };
+    },
+
+    async registerQuickPlayLoss() {
+        this.session.currentStreak = 0;
+        await Storage.set(KEYS.CURRENT_STREAK, 0);
     },
 
     async clear() {

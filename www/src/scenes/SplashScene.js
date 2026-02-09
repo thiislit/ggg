@@ -52,15 +52,10 @@ export class SplashScene extends Phaser.Scene {
         // 1. Scripts externos
         this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
 
-        // 2. Audio (SFX, Música, Fatalities)
+        // 2. Audio (SFX, Música, Fatalities, etc.)
         Object.values(ASSETS.AUDIO).flat().forEach(audio => {
             this.load.audio(audio.key, audio.path);
         });
-
-        // Audio extra para la historia
-        this.load.path = 'assets/story/';
-        this.load.audio(ASSET_KEYS.AUDIO.STORY_BGM, 'sonidofondohistoria.mp3');
-        this.load.path = ''; // Reset path
 
         // 3. Imágenes (Fondos, Avatares)
         Object.values(ASSETS.IMAGES).flat().forEach(img => {
@@ -152,20 +147,24 @@ export class SplashScene extends Phaser.Scene {
         }
         
         // --- CREAR ANIMACIONES GLOBALES ---
-        const planetAnims = [
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_EARTH, texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_MARS, texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER, texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA, texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET, texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG }
+        const allAnims = [
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_EARTH, texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, endFrame: 399 },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_MARS, texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS, endFrame: 399 },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER, texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER, endFrame: 399 },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA, texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA, endFrame: 399 },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET, texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG, endFrame: 399 },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_STAR, texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_STAR, endFrame: 99, frameRate: 20 },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_GALAXY_PURPLE, texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_GALAXY_PURPLE, endFrame: 399, frameRate: 20 },
+            { key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE, texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_BLACKHOLE, endFrame: 224, frameRate: 15 },
+            { key: ASSET_KEYS.ANIMATIONS.GALAXY_SPIN, texture: ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM, endFrame: 399 }
         ];
 
-        planetAnims.forEach(anim => {
+        allAnims.forEach(anim => {
             if (!this.anims.exists(anim.key)) {
                 this.anims.create({
                     key: anim.key,
-                    frames: this.anims.generateFrameNumbers(anim.texture, { start: 0, end: 399 }),
-                    frameRate: 15,
+                    frames: this.anims.generateFrameNumbers(anim.texture, { start: 0, end: anim.endFrame }),
+                    frameRate: anim.frameRate || 15,
                     repeat: -1
                 });
             }

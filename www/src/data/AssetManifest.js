@@ -17,6 +17,13 @@ export const ASSETS = {
             { key: 'fatality_rock', path: 'assets/sounds/rock-fatality.mp3' },
             { key: 'fatality_paper', path: 'assets/sounds/paper-fatality.mp3' },
             { key: 'fatality_scissor', path: 'assets/sounds/scissor-fatality.mp3' }
+        ],
+        STORY: [
+            { key: 'story_bgm', path: 'assets/story/sonidofondohistoria.mp3'},
+            { key: 'sfx_signal', path: 'assets/story/captandosenal.mp3'},
+            { key: 'sfx_type', path: 'assets/story/sonidoletras.mp3'},
+            { key: 'sfx_galaxy', path: 'assets/story/sonidogalaxia.mp3'},
+            { key: 'sfx_end', path: 'assets/story/sonidofindetransmicion.mp3'}
         ]
     },
     IMAGES: {
@@ -46,7 +53,7 @@ export const ASSETS = {
             { key: 'avatar_mateo', path: 'assets/avatars/navegante-1_Mateo.png' },
             { key: 'avatar_john', path: 'assets/avatars/navegante-2_John.png' }
         ],
-        PLAYER_PROFILES: [ // NUEVA CATEGORÍA
+        PLAYER_PROFILES: [
             { key: 'player_avatar_alien_1', path: 'assets/player_avatars/alien-1.png' },
             { key: 'player_avatar_alien_2', path: 'assets/player_avatars/alien2.png' },
             { key: 'player_avatar_alien_3', path: 'assets/player_avatars/alien3.png' },
@@ -55,6 +62,16 @@ export const ASSETS = {
             { key: 'player_avatar_michael', path: 'assets/player_avatars/navegante-0.png' },
             { key: 'player_avatar_mateo', path: 'assets/player_avatars/navegante-1.png' },
             { key: 'player_avatar_john', path: 'assets/player_avatars/navegante-2.png' }
+        ],
+        STORY: [
+            { key: 'robert_normal', path: 'assets/story/robert_normal.png' },
+            { key: 'robert_sad', path: 'assets/story/robert_sad.png' },
+            { key: 'robert_smile', path: 'assets/story/robert_smile.png' },
+            { key: 'story_bg', path: 'assets/story/galaxiabackground.png' },
+            { key: 'princess_1', path: 'assets/images/story/princess_1.png' },
+            { key: 'princess_2', path: 'assets/images/story/princess_2.png' },
+            { key: 'princess_3', path: 'assets/images/story/princess_3.png' },
+            { key: 'princess_4', path: 'assets/images/story/princess_4.png' }
         ]
     },
     SPRITESHEETS: [
@@ -97,6 +114,11 @@ export const ASSETS = {
             key: 'campaign_blackhole', 
             path: 'assets/backgrounds/campaign_blackhole.png',
             config: { frameWidth: 200, frameHeight: 200, startFrame: 0, endFrame: 224, margin: 4, spacing: 4 }
+        },
+        {
+            key: 'galaxy_anim',
+            path: 'assets/story/galaxy_bg.png',
+            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
         }
     ]
 };

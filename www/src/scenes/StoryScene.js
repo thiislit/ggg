@@ -63,26 +63,7 @@ export class StoryScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.path = 'assets/story/';
-        this.load.image(ASSET_KEYS.IMAGES.STORY_ROBERT_NORMAL, 'robert_normal.png');
-        this.load.image(ASSET_KEYS.IMAGES.STORY_ROBERT_SAD, 'robert_sad.png');
-        this.load.image(ASSET_KEYS.IMAGES.STORY_ROBERT_SMILE, 'robert_smile.png');
-        this.load.image(ASSET_KEYS.IMAGES.STORY_BG, 'galaxiabackground.png');
-        
-        // Cargar sonidos de la historia
-        this.load.audio(ASSET_KEYS.AUDIO.STORY_SFX_SIGNAL, 'captandosenal.mp3');
-        this.load.audio(ASSET_KEYS.AUDIO.STORY_SFX_TYPE, 'sonidoletras.mp3');
-        this.load.audio(ASSET_KEYS.AUDIO.STORY_SFX_GALAXY, 'sonidogalaxia.mp3');
-        this.load.audio(ASSET_KEYS.AUDIO.STORY_SFX_END, 'sonidofindetransmicion.mp3');
-        
-        this.load.spritesheet(ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM, 'galaxy_bg.png', {
-            frameWidth: 100,
-            frameHeight: 100,
-            startFrame: 0,
-            endFrame: 399,
-            margin: 5,
-            spacing: 5
-        });
+        // Todos los assets se precargan globalmente en SplashScene.
     }
 
     create() {
@@ -96,16 +77,8 @@ export class StoryScene extends Phaser.Scene {
             AudioManager.playSFX(this, ASSET_KEYS.AUDIO.STORY_SFX_SIGNAL, { volume: 0.6 });
         }
 
-        // Crear animación de galaxia
-        if (this.textures.exists(ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM) && !this.anims.exists(ASSET_KEYS.ANIMATIONS.GALAXY_SPIN)) {
-            this.anims.create({
-                key: ASSET_KEYS.ANIMATIONS.GALAXY_SPIN,
-                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM, { start: 0, end: 399 }),
-                frameRate: 15,
-                repeat: -1
-            });
-        }
-
+        // La animación de la galaxia se crea globalmente en SplashScene
+        
         // 0. Fondo Base Estático
         this.mainBg = this.add.image(width/2, height/2, ASSET_KEYS.IMAGES.STORY_BG)
             .setDisplaySize(width, height)

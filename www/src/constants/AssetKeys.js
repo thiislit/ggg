@@ -50,6 +50,10 @@ export const ASSET_KEYS = {
         PLAYER_AVATAR_MATEO: 'player_avatar_mateo',
         PLAYER_AVATAR_JOHN: 'player_avatar_john',
 
+        STORY_PRINCESS_1: 'princess_1',
+        STORY_PRINCESS_2: 'princess_2',
+        STORY_PRINCESS_3: 'princess_3',
+        STORY_PRINCESS_4: 'princess_4',
         STORY_ROBERT_NORMAL: 'robert_normal',
         STORY_ROBERT_SAD: 'robert_sad',
         STORY_ROBERT_SMILE: 'robert_smile',
