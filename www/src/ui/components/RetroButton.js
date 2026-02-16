@@ -1,3 +1,4 @@
+import Phaser from 'phaser'; // Import Phaser via importmap
 import { CONFIG } from '../../data/config.js';
 import { AudioManager } from '../../managers/AudioManager.js';
 
@@ -17,14 +18,14 @@ export class RetroButton extends Phaser.GameObjects.Container {
         this.glow.fillStyle(0xffffff, 0.3);
         this.glow.fillRoundedRect(-160, -40, 320, 80, 20);
         this.glow.alpha = 0;
-        
+
         this.scene.tweens.add({
             targets: this.glow,
             alpha: 0.6,
             duration: 800,
             yoyo: true,
             repeat: -1,
-            ease: 'Sine.easeInOut'
+            ease: 'Sine.easeInOut',
         });
 
         // --- 2. FONDO DEL BOTÓN ---
@@ -32,11 +33,13 @@ export class RetroButton extends Phaser.GameObjects.Container {
         this.drawBackground(color);
 
         // --- 3. TEXTO ---
-        this.label = this.scene.add.text(0, 0, text, {
-            fontFamily: CONFIG.FONTS.MAIN,
-            fontSize: '18px',
-            fill: '#000000'
-        }).setOrigin(0.5);
+        this.label = this.scene.add
+            .text(0, 0, text, {
+                fontFamily: CONFIG.FONTS.MAIN,
+                fontSize: '18px',
+                fill: '#000000',
+            })
+            .setOrigin(0.5);
 
         // --- 4. ÁREA INTERACTIVA ---
         // Definimos un rectángulo invisible para los clics
@@ -68,12 +71,12 @@ export class RetroButton extends Phaser.GameObjects.Container {
     onDown() {
         AudioManager.playSFX(this.scene, 'sfx_button');
         if (navigator.vibrate) navigator.vibrate(20);
-        
+
         this.scene.tweens.add({
             targets: this,
             scale: 0.95,
             duration: CONFIG.TIMING.BUTTON_BOUNCE,
-            yoyo: true
+            yoyo: true,
         });
     }
 
@@ -88,7 +91,7 @@ export class RetroButton extends Phaser.GameObjects.Container {
         this.scene.tweens.add({
             targets: this.glow,
             alpha: isOver ? 0.9 : 0.6,
-            duration: 200
+            duration: 200,
         });
     }
 

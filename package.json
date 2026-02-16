@@ -2,12 +2,16 @@
   "name": "rps-retro",
   "version": "1.0.0",
   "description": "Juego retro de Piedra Papel o Tijera",
+  "type": "module",
   "main": "src/main.js",
   "scripts": {
     "sync": "powershell -Command \"Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass\" && npx cap sync",
     "force-android": "powershell -Command \"cd android; .\\gradlew installDebug\"",
     "update": "npm run sync && npm run force-android",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "lint": "eslint \"www/src/**/*.js\"",
+    "lint:fix": "eslint \"www/src/**/*.js\" --fix",
+    "format": "prettier --write \"{src,www}/**/*.{js,jsx}\""
   },
   "keywords": [],
   "author": "",
@@ -18,6 +22,24 @@
     "@capacitor/core": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
     "@capacitor/preferences": "^8.0.0",
+    "@sentry/browser": "^10.38.0",
     "capacitor-plugin-safe-area": "^4.0.3"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.0",
+    "@babel/preset-react": "^7.28.5",
+    "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "babel-jest": "^30.2.0",
+    "eslint": "^10.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.3.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3"
   }
 }

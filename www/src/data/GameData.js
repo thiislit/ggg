@@ -4,12 +4,12 @@ export const GAME_DATA = {
         MARS: 'MARS',
         KEPLER: 'KEPLER',
         NEBULA: 'NEBULA',
-        ZORGTROPOLIS: 'ZORGTROPOLIS'
+        ZORGTROPOLIS: 'ZORGTROPOLIS',
     },
     SPECIES: {
         HUMAN: 'HUMAN',
         CYBORG: 'CYBORG',
-        ALIEN: 'ALIEN'
+        ALIEN: 'ALIEN',
     },
     AVATARS: {
         PLAYER_AVATAR_ALIEN_1: 'player_avatar_alien_1',
@@ -19,6 +19,6 @@ export const GAME_DATA = {
         PLAYER_AVATAR_ALIEN_5: 'player_avatar_alien_5',
         PLAYER_AVATAR_MICHAEL: 'player_avatar_michael',
         PLAYER_AVATAR_MATEO: 'player_avatar_mateo',
-        PLAYER_AVATAR_JOHN: 'player_avatar_john'
-    }
+        PLAYER_AVATAR_JOHN: 'player_avatar_john',
+    },
 };

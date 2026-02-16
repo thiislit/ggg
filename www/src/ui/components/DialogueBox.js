@@ -24,43 +24,59 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         this.typingTimer = null; // Para poder cancelarlo
 
         // Medir altura dinámicamente
-        const measureText = this.scene.add.text(0, 0, this.quote, { 
-            fontFamily: CONFIG.FONTS.MAIN, 
-            fontSize: CONFIG.UI.DIALOGUE_BOX.FONT_SIZE, 
-            wordWrap: { width: bubbleWidth - (padding * 2) }, 
-            lineSpacing: CONFIG.UI.DIALOGUE_BOX.LINE_SPACING
-        }).setVisible(false);
-        
-        const bubbleHeight = Math.max(80, measureText.height + (padding * 2));
+        const measureText = this.scene.add
+            .text(0, 0, this.quote, {
+                fontFamily: CONFIG.FONTS.MAIN,
+                fontSize: CONFIG.UI.DIALOGUE_BOX.FONT_SIZE,
+                wordWrap: { width: bubbleWidth - padding * 2 },
+                lineSpacing: CONFIG.UI.DIALOGUE_BOX.LINE_SPACING,
+            })
+            .setVisible(false);
+
+        const bubbleHeight = Math.max(80, measureText.height + padding * 2);
         measureText.destroy();
 
         // Fondo y Borde
         const bg = this.scene.add.graphics();
         bg.fillStyle(0x000000, 0.8);
-        bg.fillRoundedRect(-bubbleWidth / 2, -bubbleHeight / 2, bubbleWidth, bubbleHeight, CONFIG.UI.DIALOGUE_BOX.RADIUS);
+        bg.fillRoundedRect(
+            -bubbleWidth / 2,
+            -bubbleHeight / 2,
+            bubbleWidth,
+            bubbleHeight,
+            CONFIG.UI.DIALOGUE_BOX.RADIUS
+        );
         bg.lineStyle(3, this.color, 1);
-        bg.strokeRoundedRect(-bubbleWidth / 2, -bubbleHeight / 2, bubbleWidth, bubbleHeight, CONFIG.UI.DIALOGUE_BOX.RADIUS);
-        
+        bg.strokeRoundedRect(
+            -bubbleWidth / 2,
+            -bubbleHeight / 2,
+            bubbleWidth,
+            bubbleHeight,
+            CONFIG.UI.DIALOGUE_BOX.RADIUS
+        );
+
         // Texto del contenido
-        this.content = this.scene.add.text(0, 0, '', { 
-            fontFamily: CONFIG.FONTS.MAIN, 
-            fontSize: CONFIG.UI.DIALOGUE_BOX.FONT_SIZE, 
-            fill: '#ffffff', 
-            align: 'center', 
-            wordWrap: { width: bubbleWidth - (padding * 2) }, 
-            lineSpacing: CONFIG.UI.DIALOGUE_BOX.LINE_SPACING
-        }).setOrigin(0.5);
+        this.content = this.scene.add
+            .text(0, 0, '', {
+                fontFamily: CONFIG.FONTS.MAIN,
+                fontSize: CONFIG.UI.DIALOGUE_BOX.FONT_SIZE,
+                fill: '#ffffff',
+                align: 'center',
+                wordWrap: { width: bubbleWidth - padding * 2 },
+                lineSpacing: CONFIG.UI.DIALOGUE_BOX.LINE_SPACING,
+            })
+            .setOrigin(0.5);
 
         this.add([bg, this.content]);
         this.setScale(0);
-        
+
         // Animación de aparición
         this.scene.tweens.add({
             targets: this,
             scale: 1,
             duration: 300,
             ease: 'Back.easeOut',
-            onComplete: () => this.startTypewriter()
+            onComplete: () => this.startTypewriter(),
         });
     }
 
@@ -69,17 +85,17 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         if (this.typingTimer) this.typingTimer.remove();
 
         this.typingTimer = this.scene.time.addEvent({
-            callback: () => { 
+            callback: () => {
                 if (!this.content || !this.content.active) {
                     this.typingTimer.remove();
                     return;
                 }
                 this.content.text += this.quote[i];
-                
+
                 // Reproducir sonido de escritura
                 AudioManager.playSFX(this.scene, ASSET_KEYS.AUDIO.STORY_SFX_TYPE, {
                     volume: 0.3,
-                    detune: Math.random() * 200 - 100
+                    detune: Math.random() * 200 - 100,
                 });
 
                 i++;
@@ -87,8 +103,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
                     this.scene.events.emit('dialogue-typing-complete');
                 }
             },
-            repeat: this.quote.length - 1, 
-            delay: 100 
+            repeat: this.quote.length - 1,
+            delay: 100,
         });
     }
 
@@ -107,7 +123,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             this.scene.tweens.add({
                 targets: this,
                 alpha: 0,
@@ -116,7 +132,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
                 onComplete: () => {
                     this.destroy();
                     resolve();
-                }
+                },
             });
         });
     }

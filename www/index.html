@@ -8,8 +8,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     
+    <!-- Sentry Error Tracking -->
+    <script
+      src="https://js.sentry-cdn.com/1ab37109c5fb81ca208cb6bdf47caeb1.min.js"
+      crossorigin="anonymous"
+    ></script>
     <!-- Librería Phaser -->
     <script src="assets/js/phaser.min.js"></script>
+    <!-- Import Map para resolver "phaser" como módulo -->
+    <script type="importmap">
+        {
+            "imports": {
+                "phaser": "./assets/js/phaser-shim.js"
+            }
+        }
+    </script>
 </head>
 <body>
     <!-- Punto de entrada modular (ES6) -->

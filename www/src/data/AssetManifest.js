@@ -8,33 +8,31 @@ export const ASSETS = {
             { key: 'sfx_win', path: 'assets/sounds/yooo-win.mp3' },
             { key: 'sfx_lose', path: 'assets/sounds/whywhy-lose.mp3' },
             { key: 'sfx_tie', path: 'assets/sounds/tietie-tie.mp3' },
-            { key: 'sfx_button', path: 'assets/sounds/button-click.mp3' }
+            { key: 'sfx_button', path: 'assets/sounds/button-click.mp3' },
         ],
-        MUSIC: [
-            { key: 'bgm', path: 'assets/sounds/background.mp3' }
-        ],
+        MUSIC: [{ key: 'bgm', path: 'assets/sounds/background.mp3' }],
         FATALITIES: [
             { key: 'fatality_rock', path: 'assets/sounds/rock-fatality.mp3' },
             { key: 'fatality_paper', path: 'assets/sounds/paper-fatality.mp3' },
-            { key: 'fatality_scissor', path: 'assets/sounds/scissor-fatality.mp3' }
+            { key: 'fatality_scissor', path: 'assets/sounds/scissor-fatality.mp3' },
         ],
         STORY: [
-            { key: 'story_bgm', path: 'assets/story/sonidofondohistoria.mp3'},
-            { key: 'sfx_signal', path: 'assets/story/captandosenal.mp3'},
-            { key: 'sfx_type', path: 'assets/story/sonidoletras.mp3'},
-            { key: 'sfx_galaxy', path: 'assets/story/sonidogalaxia.mp3'},
-            { key: 'sfx_end', path: 'assets/story/sonidofindetransmicion.mp3'}
-        ]
+            { key: 'story_bgm', path: 'assets/story/sonidofondohistoria.mp3' },
+            { key: 'sfx_signal', path: 'assets/story/captandosenal.mp3' },
+            { key: 'sfx_type', path: 'assets/story/sonidoletras.mp3' },
+            { key: 'sfx_galaxy', path: 'assets/story/sonidogalaxia.mp3' },
+            { key: 'sfx_end', path: 'assets/story/sonidofindetransmicion.mp3' },
+        ],
     },
     IMAGES: {
         BACKGROUNDS: [
-            { key: 'v3_bg', path: 'assets/v3_space.png' },
+            { key: 'v3_bg', path: 'assets/backgrounds/v3_space.png' },
             { key: 'bg_green', path: 'assets/backgrounds/bg_green.png' },
             { key: 'bg_purple', path: 'assets/backgrounds/background2-morado.png' },
             { key: 'bg_blue', path: 'assets/backgrounds/background3-azul.png' },
             { key: 'bg_campaign_easy', path: 'assets/backgrounds/bg_campaign_easy.png' },
             { key: 'bg_campaign_medium', path: 'assets/backgrounds/bg_campaign_medium.png' },
-            { key: 'bg_campaign_hard', path: 'assets/backgrounds/bg_campaign_hard.png' }
+            { key: 'bg_campaign_hard', path: 'assets/backgrounds/bg_campaign_hard.png' },
         ],
         AVATARS: [
             { key: 'avatar_human_1', path: 'assets/avatars/human_1.png' },
@@ -51,7 +49,7 @@ export const ASSETS = {
             { key: 'avatar_oscar', path: 'assets/avatars/alien5_oscar.png' },
             { key: 'avatar_michael', path: 'assets/avatars/navegante-0_Michael.png' },
             { key: 'avatar_mateo', path: 'assets/avatars/navegante-1_Mateo.png' },
-            { key: 'avatar_john', path: 'assets/avatars/navegante-2_John.png' }
+            { key: 'avatar_john', path: 'assets/avatars/navegante-2_John.png' },
         ],
         PLAYER_PROFILES: [
             { key: 'player_avatar_alien_1', path: 'assets/player_avatars/alien-1.png' },
@@ -61,7 +59,7 @@ export const ASSETS = {
             { key: 'player_avatar_alien_5', path: 'assets/player_avatars/alien5.png' },
             { key: 'player_avatar_michael', path: 'assets/player_avatars/navegante-0.png' },
             { key: 'player_avatar_mateo', path: 'assets/player_avatars/navegante-1.png' },
-            { key: 'player_avatar_john', path: 'assets/player_avatars/navegante-2.png' }
+            { key: 'player_avatar_john', path: 'assets/player_avatars/navegante-2.png' },
         ],
         STORY: [
             { key: 'robert_normal', path: 'assets/story/robert_normal.png' },
@@ -71,54 +69,117 @@ export const ASSETS = {
             { key: 'princess_1', path: 'assets/images/story/princess_1.png' },
             { key: 'princess_2', path: 'assets/images/story/princess_2.png' },
             { key: 'princess_3', path: 'assets/images/story/princess_3.png' },
-            { key: 'princess_4', path: 'assets/images/story/princess_4.png' }
-        ]
+            { key: 'princess_4', path: 'assets/images/story/princess_4.png' },
+        ],
     },
     SPRITESHEETS: [
-        { 
-            key: 'planet_tierra', 
+        {
+            key: 'planet_tierra',
             path: 'assets/planets/earth_400.png',
-            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
+            config: {
+                frameWidth: 100,
+                frameHeight: 100,
+                startFrame: 0,
+                endFrame: 399,
+                margin: 5,
+                spacing: 5,
+            },
         },
-        { 
-            key: 'planet_mars', 
+        {
+            key: 'planet_mars',
             path: 'assets/planets/mars_400.png',
-            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
+            config: {
+                frameWidth: 100,
+                frameHeight: 100,
+                startFrame: 0,
+                endFrame: 399,
+                margin: 5,
+                spacing: 5,
+            },
         },
-        { 
-            key: 'planet_kepler', 
+        {
+            key: 'planet_kepler',
             path: 'assets/planets/kepler_400.png',
-            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
+            config: {
+                frameWidth: 100,
+                frameHeight: 100,
+                startFrame: 0,
+                endFrame: 399,
+                margin: 5,
+                spacing: 5,
+            },
         },
-        { 
-            key: 'planet_nebula', 
+        {
+            key: 'planet_nebula',
             path: 'assets/planets/nebula_400.png',
-            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
+            config: {
+                frameWidth: 100,
+                frameHeight: 100,
+                startFrame: 0,
+                endFrame: 399,
+                margin: 5,
+                spacing: 5,
+            },
         },
-        { 
-            key: 'planet_zorg', 
+        {
+            key: 'planet_zorg',
             path: 'assets/planets/zorg_planet_400.png',
-            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
+            config: {
+                frameWidth: 100,
+                frameHeight: 100,
+                startFrame: 0,
+                endFrame: 399,
+                margin: 5,
+                spacing: 5,
+            },
         },
-        { 
-            key: 'campaign_star', 
+        {
+            key: 'campaign_star',
             path: 'assets/backgrounds/campaign_star.png',
-            config: { frameWidth: 200, frameHeight: 200, startFrame: 0, endFrame: 99, margin: 5, spacing: 5 }
+            config: {
+                frameWidth: 200,
+                frameHeight: 200,
+                startFrame: 0,
+                endFrame: 99,
+                margin: 5,
+                spacing: 5,
+            },
         },
-        { 
-            key: 'campaign_galaxy_purple', 
+        {
+            key: 'campaign_galaxy_purple',
             path: 'assets/backgrounds/campaign_galaxy_purple.png',
-            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
+            config: {
+                frameWidth: 100,
+                frameHeight: 100,
+                startFrame: 0,
+                endFrame: 399,
+                margin: 5,
+                spacing: 5,
+            },
         },
-        { 
-            key: 'campaign_blackhole', 
+        {
+            key: 'campaign_blackhole',
             path: 'assets/backgrounds/campaign_blackhole.png',
-            config: { frameWidth: 200, frameHeight: 200, startFrame: 0, endFrame: 224, margin: 4, spacing: 4 }
+            config: {
+                frameWidth: 200,
+                frameHeight: 200,
+                startFrame: 0,
+                endFrame: 224,
+                margin: 4,
+                spacing: 4,
+            },
         },
         {
             key: 'galaxy_anim',
             path: 'assets/story/galaxy_bg.png',
-            config: { frameWidth: 100, frameHeight: 100, startFrame: 0, endFrame: 399, margin: 5, spacing: 5 }
-        }
-    ]
+            config: {
+                frameWidth: 100,
+                frameHeight: 100,
+                startFrame: 0,
+                endFrame: 399,
+                margin: 5,
+                spacing: 5,
+            },
+        },
+    ],
 };

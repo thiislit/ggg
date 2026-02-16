@@ -42,28 +42,35 @@ export class SplashScene extends Phaser.Scene {
                     onComplete: () => {
                         progressBar.destroy();
                         progressBox.destroy();
-                    }
+                    },
                 });
             });
         });
 
         // --- CARGA DINÁMICA DESDE MANIFIESTO ---
-        
+
         // 1. Scripts externos
-        this.load.script('webfont', 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js');
+        this.load.script(
+            'webfont',
+            'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js'
+        );
 
         // 2. Audio (SFX, Música, Fatalities, etc.)
-        Object.values(ASSETS.AUDIO).flat().forEach(audio => {
-            this.load.audio(audio.key, audio.path);
-        });
+        Object.values(ASSETS.AUDIO)
+            .flat()
+            .forEach((audio) => {
+                this.load.audio(audio.key, audio.path);
+            });
 
         // 3. Imágenes (Fondos, Avatares)
-        Object.values(ASSETS.IMAGES).flat().forEach(img => {
-            this.load.image(img.key, img.path);
-        });
+        Object.values(ASSETS.IMAGES)
+            .flat()
+            .forEach((img) => {
+                this.load.image(img.key, img.path);
+            });
 
         // 4. Spritesheets
-        ASSETS.SPRITESHEETS.forEach(sheet => {
+        ASSETS.SPRITESHEETS.forEach((sheet) => {
             this.load.spritesheet(sheet.key, sheet.path, sheet.config);
         });
     }
@@ -85,43 +92,48 @@ export class SplashScene extends Phaser.Scene {
         // Iniciar el fondo animado en paralelo
         this.scene.launch('BackgroundScene');
         this.scene.sendToBack('BackgroundScene');
-        this.scene.bringToTop(); 
+        this.scene.bringToTop();
 
         // --- SAFE AREA DETECTION ---
         if (window.Capacitor && window.Capacitor.Plugins.SafeArea) {
-            window.Capacitor.Plugins.SafeArea.getSafeAreaInsets().then(({ insets }) => {
-                this.game.registry.set('safeTop', insets.top);
-                this.game.registry.set('safeBottom', insets.bottom);
-                console.log('Safe Area detected:', insets);
-            }).catch(() => {
-                this.game.registry.set('safeTop', 0);
-                this.game.registry.set('safeBottom', 0);
-            });
+            window.Capacitor.Plugins.SafeArea.getSafeAreaInsets()
+                .then(({ insets }) => {
+                    this.game.registry.set('safeTop', insets.top);
+                    this.game.registry.set('safeBottom', insets.bottom);
+                    console.warn('Safe Area detected:', insets);
+                })
+                .catch(() => {
+                    this.game.registry.set('safeTop', 0);
+                    this.game.registry.set('safeBottom', 0);
+                });
         } else {
             this.game.registry.set('safeTop', 0);
             this.game.registry.set('safeBottom', 0);
         }
 
         this.sound.pauseOnBlur = false;
-        
+
         const unlockAudio = () => {
             if (this.sound.context.state === 'suspended') {
                 this.sound.context.resume();
             }
-            
+
             // Lógica inteligente: Solo reproducir si estamos en escenas que permiten música
-            const activeKey = this.scene.key; // SplashScene
+            // const activeKey = this.scene.key; // SplashScene
             // O podemos chequear el Manager de escenas global
             const currentScenes = this.game.scene.getScenes(true);
-            const isStoryActive = currentScenes.some(s => s.scene.key === 'StoryScene');
-            const isProfileActive = currentScenes.some(s => s.scene.key === 'ProfileScene');
+            const isStoryActive = currentScenes.some((s) => s.scene.key === 'StoryScene');
+            const isProfileActive = currentScenes.some((s) => s.scene.key === 'ProfileScene');
 
             if (!isStoryActive && !isProfileActive) {
-                if (!this.sound.get(ASSET_KEYS.AUDIO.MUSIC_BGM) || !this.sound.get(ASSET_KEYS.AUDIO.MUSIC_BGM).isPlaying) {
-                    AudioManager.playMusic(this, ASSET_KEYS.AUDIO.MUSIC_BGM); 
+                if (
+                    !this.sound.get(ASSET_KEYS.AUDIO.MUSIC_BGM) ||
+                    !this.sound.get(ASSET_KEYS.AUDIO.MUSIC_BGM).isPlaying
+                ) {
+                    AudioManager.playMusic(this, ASSET_KEYS.AUDIO.MUSIC_BGM);
                 }
             }
-            
+
             removeAudioListeners();
         };
 
@@ -138,34 +150,76 @@ export class SplashScene extends Phaser.Scene {
 
         // --- AUTO-JUMP DEBUG LOGIC ---
         const urlParams = new URLSearchParams(window.location.search);
-        
+
         // MODO RESET (Para desarrollo)
         if (urlParams.has('reset')) {
-            console.log('RESETTING GAME DATA...');
+            console.warn('RESETTING GAME DATA...');
             DataManager.clear();
             // O simplemente continuar como usuario nuevo:
         }
-        
+
         // --- CREAR ANIMACIONES GLOBALES ---
         const allAnims = [
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_EARTH, texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, endFrame: 399 },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_MARS, texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS, endFrame: 399 },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER, texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER, endFrame: 399 },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA, texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA, endFrame: 399 },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET, texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG, endFrame: 399 },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_STAR, texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_STAR, endFrame: 99, frameRate: 20 },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_GALAXY_PURPLE, texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_GALAXY_PURPLE, endFrame: 399, frameRate: 20 },
-            { key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE, texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_BLACKHOLE, endFrame: 224, frameRate: 15 },
-            { key: ASSET_KEYS.ANIMATIONS.GALAXY_SPIN, texture: ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM, endFrame: 399 }
+            {
+                key: ASSET_KEYS.ANIMATIONS.ANIM_EARTH,
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA,
+                endFrame: 399,
+            },
+            {
+                key: ASSET_KEYS.ANIMATIONS.ANIM_MARS,
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS,
+                endFrame: 399,
+            },
+            {
+                key: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER,
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER,
+                endFrame: 399,
+            },
+            {
+                key: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA,
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA,
+                endFrame: 399,
+            },
+            {
+                key: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET,
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG,
+                endFrame: 399,
+            },
+            {
+                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_STAR,
+                texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_STAR,
+                endFrame: 99,
+                frameRate: 20,
+            },
+            {
+                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_GALAXY_PURPLE,
+                texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_GALAXY_PURPLE,
+                endFrame: 399,
+                frameRate: 20,
+            },
+            {
+                key: ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE,
+                texture: ASSET_KEYS.SPRITESHEETS.CAMPAIGN_BLACKHOLE,
+                endFrame: 224,
+                frameRate: 15,
+            },
+            {
+                key: ASSET_KEYS.ANIMATIONS.GALAXY_SPIN,
+                texture: ASSET_KEYS.SPRITESHEETS.STORY_GALAXY_ANIM,
+                endFrame: 399,
+            },
         ];
 
-        allAnims.forEach(anim => {
+        allAnims.forEach((anim) => {
             if (!this.anims.exists(anim.key)) {
                 this.anims.create({
                     key: anim.key,
-                    frames: this.anims.generateFrameNumbers(anim.texture, { start: 0, end: anim.endFrame }),
+                    frames: this.anims.generateFrameNumbers(anim.texture, {
+                        start: 0,
+                        end: anim.endFrame,
+                    }),
                     frameRate: anim.frameRate || 15,
-                    repeat: -1
+                    repeat: -1,
                 });
             }
         });
@@ -174,9 +228,12 @@ export class SplashScene extends Phaser.Scene {
         if (!this.anims.exists(ASSET_KEYS.ANIMATIONS.PLANET_ROTATE)) {
             this.anims.create({
                 key: ASSET_KEYS.ANIMATIONS.PLANET_ROTATE,
-                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, { start: 0, end: 399 }),
+                frames: this.anims.generateFrameNumbers(ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, {
+                    start: 0,
+                    end: 399,
+                }),
                 frameRate: 15,
-                repeat: -1
+                repeat: -1,
             });
         }
 
@@ -195,13 +252,29 @@ export class SplashScene extends Phaser.Scene {
         const startScene = urlParams.get('scene');
         if (startScene) {
             this.time.delayedCall(200, () => {
-                switch(startScene) {
-                    case 'story': this.scene.start('StoryScene'); break;
-                    case 'menu': this.scene.start('MainMenuScene'); break;
-                    case 'game': this.scene.start('GameScene'); break;
-                    case 'profile': this.scene.start('ProfileScene'); break;
-                    case 'gameover': this.scene.start('GameOverScene', { winner: 'ZORG', streak: 5, isNewRecord: true }); break;
-                    case 'settings': this.scene.start('SettingsScene'); break;
+                switch (startScene) {
+                    case 'story':
+                        this.scene.start('StoryScene');
+                        break;
+                    case 'menu':
+                        this.scene.start('MainMenuScene');
+                        break;
+                    case 'game':
+                        this.scene.start('GameScene');
+                        break;
+                    case 'profile':
+                        this.scene.start('ProfileScene');
+                        break;
+                    case 'gameover':
+                        this.scene.start('GameOverScene', {
+                            winner: 'ZORG',
+                            streak: 5,
+                            isNewRecord: true,
+                        });
+                        break;
+                    case 'settings':
+                        this.scene.start('SettingsScene');
+                        break;
                 }
             });
             return;
@@ -221,38 +294,38 @@ export class SplashScene extends Phaser.Scene {
                     console.warn('Fuente inactiva. Iniciando fallback.');
                     this.buildScene();
                 },
-                timeout: 2000
+                timeout: 2000,
             });
         }
     }
 
     createRingTitle(x, y) {
         const container = this.add.container(x, y);
-        const radius = 160; 
-        const fontSize = '48px'; 
+        const radius = 160;
+        const fontSize = '48px';
         const color = CONFIG.COLORS.TEXT_MAIN;
-        
+
         // --- ANILLO DE FONDO DIFUSO (EFECTO GRAVEDAD/BLUR) ---
         const bgRing = this.add.graphics();
-        const thickness = 140; 
-        
+        const thickness = 140;
+
         for (let i = 0; i < thickness; i++) {
-            const alpha = 0.4 * Math.pow(1 - (i / thickness), 2);
+            const alpha = 0.4 * Math.pow(1 - i / thickness, 2);
             bgRing.lineStyle(2, 0x000000, alpha);
-            bgRing.strokeCircle(0, 0, radius + (thickness * 0.5) - i);
-            bgRing.strokeCircle(0, 0, radius - (thickness * 0.5) + i);
+            bgRing.strokeCircle(0, 0, radius + thickness * 0.5 - i);
+            bgRing.strokeCircle(0, 0, radius - thickness * 0.5 + i);
         }
         container.add(bgRing);
 
-        const letterSpacingAngle = 17; 
+        const letterSpacingAngle = 17;
 
         const wordsData = [
-            { text: "ROCK.", angle: -90 },
-            { text: "PAPER.", angle: 10 },
-            { text: "SCISSORS.", angle: 144 }
+            { text: 'ROCK.', angle: -90 },
+            { text: 'PAPER.', angle: 10 },
+            { text: 'SCISSORS.', angle: 144 },
         ];
 
-        wordsData.forEach(item => {
+        wordsData.forEach((item) => {
             const word = item.text;
             const wordCenterAngle = item.angle;
             const centerIndex = (word.length - 1) / 2;
@@ -266,16 +339,20 @@ export class SplashScene extends Phaser.Scene {
                 const ty = Math.sin(finalAngleRad) * radius;
 
                 const char = word[i];
-                const letter = this.add.text(tx, ty, char, { 
-                    fontFamily: '"Press Start 2P"', fontSize: fontSize, fill: color 
-                }).setOrigin(0.5)
-                  .setRotation(finalAngleRad + Math.PI / 2)
-                  .setShadow(4, 4, '#000000', 0, false, true); 
+                const letter = this.add
+                    .text(tx, ty, char, {
+                        fontFamily: '"Press Start 2P"',
+                        fontSize: fontSize,
+                        fill: color,
+                    })
+                    .setOrigin(0.5)
+                    .setRotation(finalAngleRad + Math.PI / 2)
+                    .setShadow(4, 4, '#000000', 0, false, true);
 
                 container.add(letter);
             }
         });
-        
+
         return container;
     }
 
@@ -292,9 +369,9 @@ export class SplashScene extends Phaser.Scene {
         this.tweens.add({
             targets: title,
             angle: 360,
-            duration: 16000, 
+            duration: 16000,
             repeat: -1,
-            ease: 'Linear'
+            ease: 'Linear',
         });
 
         this.tweens.add({
@@ -303,7 +380,7 @@ export class SplashScene extends Phaser.Scene {
             duration: 1500,
             yoyo: true,
             repeat: -1,
-            ease: 'Sine.easeInOut'
+            ease: 'Sine.easeInOut',
         });
 
         // Efecto Neón
@@ -316,19 +393,19 @@ export class SplashScene extends Phaser.Scene {
             repeat: -1,
             onUpdate: () => {
                 const color = Phaser.Display.Color.HSVToRGB(colorCycle.h, 1, 1).color;
-                title.list.forEach(child => {
+                title.list.forEach((child) => {
                     if (child.setTint) child.setTint(color);
                 });
-            }
+            },
         });
 
         // BOTÓN DE INICIO PREMIUM (Usando Componente Reutilizable)
         new RetroButton(
-            this, 
-            width / 2, 
-            height * 0.63, 
-            "TAP TO START", 
-            CONFIG.COLORS.P1_BLUE, 
+            this,
+            width / 2,
+            height * 0.63,
+            'TAP TO START',
+            CONFIG.COLORS.P1_BLUE,
             () => {
                 if (!DataManager.hasSeenIntro()) {
                     this.scene.start('StoryScene');

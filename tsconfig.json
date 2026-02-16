@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "es2020",
+    "moduleResolution": "node",
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "outDir": "./dist", // Output directory for compiled JavaScript
+    "rootDir": "./www",  // Root directory of your source files
+    "lib": ["es2020", "dom"],
+    "isolatedModules": true
+  },
+  "include": [
+    "./www/**/*.js",     // Include all JavaScript files in www
+    "./www/**/*.ts"      // Include all TypeScript files in www (for future migration)
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "jest.config.js"
+  ]
+}

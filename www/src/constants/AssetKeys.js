@@ -8,9 +8,9 @@ export const ASSET_KEYS = {
         SFX_LOSE: 'sfx_lose',
         SFX_TIE: 'sfx_tie',
         SFX_BUTTON: 'sfx_button',
-        
+
         MUSIC_BGM: 'bgm',
-        
+
         FATALITY_ROCK: 'fatality_rock',
         FATALITY_PAPER: 'fatality_paper',
         FATALITY_SCISSOR: 'fatality_scissor',
@@ -29,7 +29,7 @@ export const ASSET_KEYS = {
         BG_CAMPAIGN_EASY: 'bg_campaign_easy',
         BG_CAMPAIGN_MEDIUM: 'bg_campaign_medium',
         BG_CAMPAIGN_HARD: 'bg_campaign_hard',
-        
+
         // Nuevas claves de avatares
         AVATAR_ZORG: 'avatar_zorg', // Actualizado para coincidir con AssetManifest
         AVATAR_OCTAVIUS: 'avatar_octavius',
@@ -65,7 +65,7 @@ export const ASSET_KEYS = {
         PLANET_KEPLER: 'planet_kepler',
         PLANET_NEBULA: 'planet_nebula',
         PLANET_ZORG: 'planet_zorg',
-        
+
         CAMPAIGN_STAR: 'campaign_star',
         CAMPAIGN_GALAXY_PURPLE: 'campaign_galaxy_purple',
         CAMPAIGN_BLACKHOLE: 'campaign_blackhole',
@@ -83,5 +83,5 @@ export const ASSET_KEYS = {
         ANIM_CAMPAIGN_STAR: 'anim_campaign_star',
         ANIM_CAMPAIGN_GALAXY_PURPLE: 'anim_campaign_galaxy_purple',
         ANIM_CAMPAIGN_BLACKHOLE: 'anim_campaign_blackhole',
-    }
+    },
 };

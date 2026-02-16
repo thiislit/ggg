@@ -8,14 +8,16 @@ export class FatalityManager {
     play(choiceIndex, target, attacker, isPlayerWin, onComplete) {
         // 0: ROCK, 1: PAPER, 2: SCISSORS
         if (choiceIndex === 0) this.playRockFatality(target, attacker, isPlayerWin, onComplete);
-        else if (choiceIndex === 1) this.playPaperFatality(target, attacker, isPlayerWin, onComplete);
-        else if (choiceIndex === 2) this.playScissorFatality(target, attacker, isPlayerWin, onComplete);
+        else if (choiceIndex === 1)
+            this.playPaperFatality(target, attacker, isPlayerWin, onComplete);
+        else if (choiceIndex === 2)
+            this.playScissorFatality(target, attacker, isPlayerWin, onComplete);
     }
 
     playRockFatality(target, attacker, isPlayerWin, onComplete) {
         // --- SMASH DE ROCA ---
         AudioManager.playSFX(this.scene, 'fatality_rock');
-        this.scene.cameras.main.shake(4000, 0.05); 
+        this.scene.cameras.main.shake(4000, 0.05);
         this.scene.cameras.main.flash(500, 255, 255, 255);
 
         attacker.setDepth(100);
@@ -29,7 +31,7 @@ export class FatalityManager {
             onComplete: () => {
                 target.setVisible(false);
                 if (onComplete) onComplete(isPlayerWin);
-            }
+            },
         });
     }
 
@@ -37,7 +39,7 @@ export class FatalityManager {
         // --- WRAP DE PAPEL ---
         AudioManager.playSFX(this.scene, 'fatality_paper');
         target.setTint(0x888888);
-        
+
         this.scene.tweens.add({
             targets: target,
             scale: 0,
@@ -47,7 +49,7 @@ export class FatalityManager {
             onComplete: () => {
                 target.setVisible(false);
                 if (onComplete) onComplete(isPlayerWin);
-            }
+            },
         });
 
         attacker.setDepth(100);
@@ -80,7 +82,7 @@ export class FatalityManager {
             },
             onComplete: () => {
                 slash.destroy();
-            }
+            },
         });
 
         this.scene.tweens.add({
@@ -93,7 +95,7 @@ export class FatalityManager {
             delay: 2100,
             onComplete: () => {
                 if (onComplete) onComplete(isPlayerWin);
-            }
+            },
         });
     }
 }

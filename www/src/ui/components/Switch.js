@@ -37,12 +37,20 @@ export class Switch extends Phaser.GameObjects.Container {
     }
 
     setupText() {
-        this.offText = this.scene.add.text(this.valueX + 15, 0, "OFF", { 
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: '8px', fill: this.colors.ACCENT_STR 
-        }).setOrigin(0.5);
-        this.onText = this.scene.add.text(this.valueX + 65, 0, "ON", { 
-            fontFamily: CONFIG.FONTS.MAIN, fontSize: '8px', fill: this.colors.ACCENT_STR 
-        }).setOrigin(0.5);
+        this.offText = this.scene.add
+            .text(this.valueX + 15, 0, 'OFF', {
+                fontFamily: CONFIG.FONTS.MAIN,
+                fontSize: '8px',
+                fill: this.colors.ACCENT_STR,
+            })
+            .setOrigin(0.5);
+        this.onText = this.scene.add
+            .text(this.valueX + 65, 0, 'ON', {
+                fontFamily: CONFIG.FONTS.MAIN,
+                fontSize: '8px',
+                fill: this.colors.ACCENT_STR,
+            })
+            .setOrigin(0.5);
         this.add([this.offText, this.onText]);
     }
 
@@ -52,7 +60,8 @@ export class Switch extends Phaser.GameObjects.Container {
     }
 
     setupInput() {
-        this.inputArea = this.scene.add.rectangle(this.valueX + 40, 0, 80, 30, 0, 0)
+        this.inputArea = this.scene.add
+            .rectangle(this.valueX + 40, 0, 80, 30, 0, 0)
             .setInteractive({ useHandCursor: true });
         this.add(this.inputArea);
 
@@ -75,26 +84,26 @@ export class Switch extends Phaser.GameObjects.Container {
         this.switchBg.clear();
         this.switchBg.lineStyle(2, this.colors.ACCENT);
         this.switchBg.strokeRoundedRect(this.valueX, -15, 80, 30, 15);
-        
+
         if (enabled) {
             this.switchBg.fillStyle(this.colors.ACCENT, 1);
             this.switchBg.fillRoundedRect(this.valueX, -15, 80, 30, 15);
             this.handle.setFillStyle(this.colors.PRIMARY);
-            this.offText.setFill(CONFIG.COLORS.TEXT_DARK); 
+            this.offText.setFill(CONFIG.COLORS.TEXT_DARK);
             this.onText.setFill(CONFIG.COLORS.TEXT_DARK);
         } else {
             this.switchBg.fillStyle(0x000000, 1);
             this.switchBg.fillRoundedRect(this.valueX, -15, 80, 30, 15);
             this.handle.setFillStyle(this.colors.ACCENT);
-            this.offText.setFill(this.colors.ACCENT_STR); 
+            this.offText.setFill(this.colors.ACCENT_STR);
             this.onText.setFill(this.colors.ACCENT_STR);
         }
 
         this.scene.tweens.killTweensOf(this.handle);
-        this.scene.tweens.add({ 
-            targets: this.handle, 
-            x: enabled ? this.valueX + 65 : this.valueX + 15, 
-            duration: 150
+        this.scene.tweens.add({
+            targets: this.handle,
+            x: enabled ? this.valueX + 65 : this.valueX + 15,
+            duration: 150,
         });
     }
 

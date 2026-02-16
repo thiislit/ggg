@@ -35,7 +35,8 @@ export class Slider extends Phaser.GameObjects.Container {
     }
 
     setupHandle() {
-        this.handle = this.scene.add.circle(0, 0, 15, this.colors.PRIMARY)
+        this.handle = this.scene.add
+            .circle(0, 0, 15, this.colors.PRIMARY)
             .setInteractive({ draggable: true, useHandCursor: true });
         this.add(this.handle);
     }
@@ -45,10 +46,10 @@ export class Slider extends Phaser.GameObjects.Container {
             const minX = -this.sliderWidth / 2;
             const maxX = this.sliderWidth / 2;
             const clampedX = Phaser.Math.Clamp(dragX, minX, maxX);
-            
+
             this.handle.x = clampedX;
             this.value = (clampedX - minX) / this.sliderWidth;
-            
+
             if (this.onChangeCallback) {
                 this.onChangeCallback(this.value);
             }
@@ -57,7 +58,7 @@ export class Slider extends Phaser.GameObjects.Container {
 
     updateHandlePosition() {
         const minX = -this.sliderWidth / 2;
-        this.handle.x = minX + (this.value * this.sliderWidth);
+        this.handle.x = minX + this.value * this.sliderWidth;
     }
 
     // Método para refrescar los colores si el tema cambia

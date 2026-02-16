@@ -12,11 +12,11 @@ export class ArrowSelector extends Phaser.GameObjects.Container {
         this.callback = callback;
 
         const {
-            distance = 100,      // Distancia entre flechas
-            type = 'none',      // 'circular', 'square', 'none'
-            size = 100,         // Tamaño del fondo
+            distance = 100, // Distancia entre flechas
+            type = 'none', // 'circular', 'square', 'none'
+            size = 100, // Tamaño del fondo
             color = CONFIG.THEME.PRIMARY,
-            arrowSize = '38px'
+            arrowSize = '38px',
         } = options;
 
         // 1. Dibujar Fondo (Si se requiere)
@@ -36,8 +36,8 @@ export class ArrowSelector extends Phaser.GameObjects.Container {
         }
 
         // 2. Crear Flechas
-        this.leftArrow = this.createArrow(-distance, "<", arrowSize);
-        this.rightArrow = this.createArrow(distance, ">", arrowSize);
+        this.leftArrow = this.createArrow(-distance, '<', arrowSize);
+        this.rightArrow = this.createArrow(distance, '>', arrowSize);
 
         this.add([this.leftArrow, this.rightArrow]);
 
@@ -46,11 +46,14 @@ export class ArrowSelector extends Phaser.GameObjects.Container {
     }
 
     createArrow(offsetX, char, fontSize) {
-        const arrow = this.scene.add.text(offsetX, 0, char, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: fontSize,
-            fill: CONFIG.THEME.ACCENT_STR
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const arrow = this.scene.add
+            .text(offsetX, 0, char, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: fontSize,
+                fill: CONFIG.THEME.ACCENT_STR,
+            })
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });
 
         // Animación y Sonido al pulsar
         arrow.on('pointerdown', () => {
@@ -59,7 +62,7 @@ export class ArrowSelector extends Phaser.GameObjects.Container {
                 targets: arrow,
                 scale: 1.3,
                 duration: 80,
-                yoyo: true
+                yoyo: true,
             });
             if (this.callback) this.callback(char === '<' ? -1 : 1);
         });

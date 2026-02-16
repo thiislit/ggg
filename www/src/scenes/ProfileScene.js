@@ -21,58 +21,96 @@ export class ProfileScene extends Phaser.Scene {
 
         // 1. Fondo sólido
         this.add.rectangle(0, 0, width, height, colors.BG, 1).setOrigin(0);
-        
+
         // 2. Título Superior
-        const titleText = this.fromStory ? "IDENTIFY YOURSELF" : "PLAYER PROFILE";
-        this.add.text(width / 2, height * 0.07, titleText, {
-            fontFamily: '"Press Start 2P"', fontSize: '26px', fill: colors.PRIMARY_STR
-        }).setOrigin(0.5);
+        const titleText = this.fromStory ? 'IDENTIFY YOURSELF' : 'PLAYER PROFILE';
+        this.add
+            .text(width / 2, height * 0.07, titleText, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '26px',
+                fill: colors.PRIMARY_STR,
+            })
+            .setOrigin(0.5);
 
         const centerX = width / 2;
 
         // --- SECCIÓN A: PLANETA (CAMPO CIRCULAR) ---
-        let currentY = height * 0.20;
+        let currentY = height * 0.2;
         const P = GAME_DATA.PLANETS;
         this.planets = [P.EARTH, P.MARS, P.KEPLER, P.NEBULA];
         let savedPlanet = DataManager.getPlanet();
         this.planetIdx = Math.max(0, this.planets.indexOf(savedPlanet));
 
-        this.planetNameTxt = this.add.text(centerX, currentY - 90, `HOME: ${this.planets[this.planetIdx]}`, {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.PRIMARY_STR
-        }).setOrigin(0.5);
+        this.planetNameTxt = this.add
+            .text(centerX, currentY - 90, `HOME: ${this.planets[this.planetIdx]}`, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '12px',
+                fill: colors.PRIMARY_STR,
+            })
+            .setOrigin(0.5);
 
         // Usando el nuevo componente reutilizable
-        new ArrowSelector(this, centerX, currentY, { 
-            type: 'circular', 
-            size: 130, 
-            distance: 120 
-        }, (dir) => this.updatePlanet(dir));
-        
+        new ArrowSelector(
+            this,
+            centerX,
+            currentY,
+            {
+                type: 'circular',
+                size: 130,
+                distance: 120,
+            },
+            (dir) => this.updatePlanet(dir)
+        );
+
         const initialPlanet = this.planets[this.planetIdx];
         const planetConfigs = {
-            [P.EARTH]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, anim: ASSET_KEYS.ANIMATIONS.ANIM_EARTH },
-            [P.MARS]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS, anim: ASSET_KEYS.ANIMATIONS.ANIM_MARS },
-            [P.KEPLER]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER, anim: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER },
-            [P.NEBULA]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA, anim: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA },
-            [P.ZORGTROPOLIS]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG, anim: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET }
+            [P.EARTH]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_EARTH,
+            },
+            [P.MARS]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_MARS,
+            },
+            [P.KEPLER]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER,
+            },
+            [P.NEBULA]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA,
+            },
+            [P.ZORGTROPOLIS]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET,
+            },
         };
 
-        this.planetPreview = this.add.sprite(centerX, currentY, planetConfigs[initialPlanet].texture)
+        this.planetPreview = this.add
+            .sprite(centerX, currentY, planetConfigs[initialPlanet].texture)
             .setDisplaySize(100, 100)
-            .play(initialPlanet === P.EARTH ? ASSET_KEYS.ANIMATIONS.PLANET_ROTATE : planetConfigs[initialPlanet].anim);
+            .play(
+                initialPlanet === P.EARTH
+                    ? ASSET_KEYS.ANIMATIONS.PLANET_ROTATE
+                    : planetConfigs[initialPlanet].anim
+            );
 
         // --- SECCIÓN B: NOMBRE (TEXTO EDITABLE CON BOTÓN OK) ---
-        currentY += 160; 
+        currentY += 160;
         const name = DataManager.getName();
-        
+
         // Etiqueta arriba
-        this.add.text(centerX, currentY - 50, "CODENAME", {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', fill: '#888'
-        }).setOrigin(0.5);
+        this.add
+            .text(centerX, currentY - 50, 'CODENAME', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '10px',
+                fill: '#888',
+            })
+            .setOrigin(0.5);
 
         // Contenedor del Input Visual
         const inputContainer = this.add.container(centerX, currentY);
-        
+
         // Fondo del campo de texto
         const inputBg = this.add.graphics();
         inputBg.fillStyle(0x000000, 0.6);
@@ -81,9 +119,13 @@ export class ProfileScene extends Phaser.Scene {
         inputBg.strokeRoundedRect(-140, -25, 200, 50, 8);
 
         // Texto del nombre (dentro del fondo)
-        this.nameTxt = this.add.text(-130, 0, name, {
-            fontFamily: '"Press Start 2P"', fontSize: '18px', fill: colors.ACCENT_STR
-        }).setOrigin(0, 0.5);
+        this.nameTxt = this.add
+            .text(-130, 0, name, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '18px',
+                fill: colors.ACCENT_STR,
+            })
+            .setOrigin(0, 0.5);
 
         // Botón OK al lado
         const okBtn = this.add.container(100, 0);
@@ -92,20 +134,32 @@ export class ProfileScene extends Phaser.Scene {
         okBg.fillRoundedRect(-35, -25, 70, 50, 8);
         okBg.lineStyle(2, 0xffffff, 1);
         okBg.strokeRoundedRect(-35, -25, 70, 50, 8);
-        
-        const okTxt = this.add.text(0, 0, "OK", {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', fill: '#000'
-        }).setOrigin(0.5);
-        
+
+        const okTxt = this.add
+            .text(0, 0, 'OK', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '14px',
+                fill: '#000',
+            })
+            .setOrigin(0.5);
+
         okBtn.add([okBg, okTxt]);
-        okBg.setInteractive(new Phaser.Geom.Rectangle(-35, -25, 70, 50), Phaser.Geom.Rectangle.Contains);
+        okBg.setInteractive(
+            new Phaser.Geom.Rectangle(-35, -25, 70, 50),
+            Phaser.Geom.Rectangle.Contains
+        );
 
         inputContainer.add([inputBg, this.nameTxt, okBtn]);
 
         // --- CURSOR PARPADEANTE ---
-        this.cursor = this.add.text(0, 0, "_", {
-            fontFamily: '"Press Start 2P"', fontSize: '18px', fill: colors.ACCENT_STR
-        }).setOrigin(0, 0.5).setVisible(false);
+        this.cursor = this.add
+            .text(0, 0, '_', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '18px',
+                fill: colors.ACCENT_STR,
+            })
+            .setOrigin(0, 0.5)
+            .setVisible(false);
         inputContainer.add(this.cursor);
 
         this.tweens.add({
@@ -114,7 +168,7 @@ export class ProfileScene extends Phaser.Scene {
             duration: 500,
             yoyo: true,
             repeat: -1,
-            ease: 'Step'
+            ease: 'Step',
         });
 
         // Acción al pulsar el botón OK o el fondo del nombre
@@ -125,7 +179,10 @@ export class ProfileScene extends Phaser.Scene {
         };
 
         okBg.on('pointerdown', triggerEdit);
-        inputBg.setInteractive(new Phaser.Geom.Rectangle(-140, -25, 200, 50), Phaser.Geom.Rectangle.Contains);
+        inputBg.setInteractive(
+            new Phaser.Geom.Rectangle(-140, -25, 200, 50),
+            Phaser.Geom.Rectangle.Contains
+        );
         inputBg.on('pointerdown', triggerEdit);
 
         // Limpiar input al salir
@@ -136,77 +193,104 @@ export class ProfileScene extends Phaser.Scene {
             }
         });
 
-                // --- SECCIÓN C: AVATAR (CAMPO CUADRADO) ---
-                currentY += 180;
-                const A = ASSET_KEYS.IMAGES; // Usar ASSET_KEYS.IMAGES directamente
-                
-                        console.log("DataManager.hasCompletedStory():", DataManager.hasCompletedStory());
-                        let allPlayerAvatars = [
-                            A.PLAYER_AVATAR_ALIEN_2,
-                            A.PLAYER_AVATAR_ALIEN_3,
-                            A.PLAYER_AVATAR_ALIEN_4,
-                            A.PLAYER_AVATAR_ALIEN_5,
-                            A.PLAYER_AVATAR_MICHAEL,
-                            A.PLAYER_AVATAR_MATEO,
-                            A.PLAYER_AVATAR_JOHN
-                        ];
-                
-                        // Añadir el avatar de Zorg (alien-1) si la historia está completada
-                        if (DataManager.hasCompletedStory()) {
-                            allPlayerAvatars.unshift(A.PLAYER_AVATAR_ALIEN_1); // Añadir al principio
-                        }
-                        
-                        this.avatars = allPlayerAvatars;
-                        console.log("Available avatars in ProfileScene:", this.avatars);
-                        let savedAvatar = DataManager.getAvatar();
-                        console.log("Saved avatar:", savedAvatar);
-                
-                        // Asegurarse de que el avatar guardado sea válido para la selección actual
-                        let initialAvatarIndex = this.avatars.indexOf(savedAvatar);
-                        if (initialAvatarIndex === -1) {
-                            // Si el avatar guardado no está disponible (ej. alien-1 antes de completar historia)
-                            // o si es un avatar que no existe, seleccionamos el primer avatar disponible.
-                            initialAvatarIndex = 0;
-                            // También actualizamos el DataManager para que refleje el avatar disponible
-                            DataManager.setAvatar(this.avatars[initialAvatarIndex]);
-                        }
-                        this.avatarIdx = initialAvatarIndex;
-                        console.log("Initial avatar index:", this.avatarIdx, "Avatar selected:", this.avatars[this.avatarIdx]);        this.add.text(centerX, currentY - 130, "UNIT APPEARANCE", {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', fill: colors.PRIMARY_STR
-        }).setOrigin(0.5);
+        // --- SECCIÓN C: AVATAR (CAMPO CUADRADO) ---
+        currentY += 180;
+        const A = ASSET_KEYS.IMAGES; // Usar ASSET_KEYS.IMAGES directamente
 
-        new ArrowSelector(this, centerX, currentY, { 
-            type: 'square', 
-            size: 200, 
-            distance: 155 
-        }, (dir) => this.updateAvatar(dir));
-        
-        this.avatarPreview = this.add.image(centerX, currentY, this.avatars[this.avatarIdx])
+        console.warn('DataManager.hasCompletedStory():', DataManager.hasCompletedStory());
+        let allPlayerAvatars = [
+            A.PLAYER_AVATAR_ALIEN_2,
+            A.PLAYER_AVATAR_ALIEN_3,
+            A.PLAYER_AVATAR_ALIEN_4,
+            A.PLAYER_AVATAR_ALIEN_5,
+            A.PLAYER_AVATAR_MICHAEL,
+            A.PLAYER_AVATAR_MATEO,
+            A.PLAYER_AVATAR_JOHN,
+        ];
+
+        // Añadir el avatar de Zorg (alien-1) si la historia está completada
+        if (DataManager.hasCompletedStory()) {
+            allPlayerAvatars.unshift(A.PLAYER_AVATAR_ALIEN_1); // Añadir al principio
+        }
+
+        this.avatars = allPlayerAvatars;
+        console.warn('Available avatars in ProfileScene:', this.avatars);
+        let savedAvatar = DataManager.getAvatar();
+        console.warn('Saved avatar:', savedAvatar);
+
+        // Asegurarse de que el avatar guardado sea válido para la selección actual
+        let initialAvatarIndex = this.avatars.indexOf(savedAvatar);
+        if (initialAvatarIndex === -1) {
+            // Si el avatar guardado no está disponible (ej. alien-1 antes de completar historia)
+            // o si es un avatar que no existe, seleccionamos el primer avatar disponible.
+            initialAvatarIndex = 0;
+            // También actualizamos el DataManager para que refleje el avatar disponible
+            DataManager.setAvatar(this.avatars[initialAvatarIndex]);
+        }
+        this.avatarIdx = initialAvatarIndex;
+        console.warn(
+            'Initial avatar index:',
+            this.avatarIdx,
+            'Avatar selected:',
+            this.avatars[this.avatarIdx]
+        );
+        this.add
+            .text(centerX, currentY - 130, 'UNIT APPEARANCE', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '12px',
+                fill: colors.PRIMARY_STR,
+            })
+            .setOrigin(0.5);
+
+        new ArrowSelector(
+            this,
+            centerX,
+            currentY,
+            {
+                type: 'square',
+                size: 200,
+                distance: 155,
+            },
+            (dir) => this.updateAvatar(dir)
+        );
+
+        this.avatarPreview = this.add
+            .image(centerX, currentY, this.avatars[this.avatarIdx])
             .setScale(0.4);
 
         // --- SECCIÓN D: ESPECIE (TEXTO CON FLECHAS) ---
-        currentY += 200; 
+        currentY += 200;
         const S = GAME_DATA.SPECIES;
         this.speciesList = [S.CYBORG, S.HUMAN, S.ALIEN];
         let savedSpecies = DataManager.getSpecies();
         this.speciesIdx = Math.max(0, this.speciesList.indexOf(savedSpecies));
 
-        this.add.text(centerX, currentY - 45, "BIOLOGICAL TYPE", {
-            fontFamily: '"Press Start 2P"', fontSize: '11px', fill: '#888'
-        }).setOrigin(0.5);
+        this.add
+            .text(centerX, currentY - 45, 'BIOLOGICAL TYPE', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '11px',
+                fill: '#888',
+            })
+            .setOrigin(0.5);
 
-        this.speciesTxt = this.add.text(centerX, currentY, this.speciesList[this.speciesIdx], {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', fill: colors.PRIMARY_STR
-        }).setOrigin(0.5);
+        this.speciesTxt = this.add
+            .text(centerX, currentY, this.speciesList[this.speciesIdx], {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '20px',
+                fill: colors.PRIMARY_STR,
+            })
+            .setOrigin(0.5);
 
-        new ArrowSelector(this, centerX, currentY, { distance: 130 }, (dir) => this.updateSpecies(dir));
+        new ArrowSelector(this, centerX, currentY, { distance: 130 }, (dir) =>
+            this.updateSpecies(dir)
+        );
 
         // --- BOTÓN FINAL (Usando Componente Reutilizable) ---
-        const btnText = this.fromStory ? "CONFIRM IDENTITY" : "CONFIRM PROFILE";
+        const btnText = this.fromStory ? 'CONFIRM IDENTITY' : 'CONFIRM PROFILE';
         const btnAction = () => {
-            const finalName = this.nameTxt.text.trim() || "PLAYER 1";
+            const finalName = this.nameTxt.text.trim() || 'PLAYER 1';
             DataManager.setName(finalName);
-            
+
             if (this.fromStory) {
                 this.scene.start('StoryScene', { resume: true });
             } else {
@@ -214,14 +298,7 @@ export class ProfileScene extends Phaser.Scene {
             }
         };
 
-        new RetroButton(
-            this, 
-            centerX, 
-            height * 0.77, 
-            btnText, 
-            colors.PRIMARY, 
-            btnAction
-        );
+        new RetroButton(this, centerX, height * 0.77, btnText, colors.PRIMARY, btnAction);
     }
 
     startEditingName() {
@@ -263,7 +340,7 @@ export class ProfileScene extends Phaser.Scene {
 
     stopEditingName() {
         this.cursor.setVisible(false);
-        const finalName = this.nameTxt.text.trim() || "PLAYER 1";
+        const finalName = this.nameTxt.text.trim() || 'PLAYER 1';
         this.nameTxt.setText(finalName);
         DataManager.setName(finalName);
     }
@@ -273,22 +350,39 @@ export class ProfileScene extends Phaser.Scene {
         const p = this.planets[this.planetIdx];
         this.planetNameTxt.setText(`HOME: ${p}`);
         DataManager.setPlanet(p);
-        
+
         const P = GAME_DATA.PLANETS;
         const planetConfigs = {
-            [P.EARTH]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA, anim: ASSET_KEYS.ANIMATIONS.ANIM_EARTH },
-            [P.MARS]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS, anim: ASSET_KEYS.ANIMATIONS.ANIM_MARS },
-            [P.KEPLER]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER, anim: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER },
-            [P.NEBULA]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA, anim: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA },
-            [P.ZORGTROPOLIS]: { texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG, anim: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET }
+            [P.EARTH]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_TIERRA,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_EARTH,
+            },
+            [P.MARS]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_MARS,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_MARS,
+            },
+            [P.KEPLER]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_KEPLER,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_KEPLER,
+            },
+            [P.NEBULA]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_NEBULA,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_NEBULA,
+            },
+            [P.ZORGTROPOLIS]: {
+                texture: ASSET_KEYS.SPRITESHEETS.PLANET_ZORG,
+                anim: ASSET_KEYS.ANIMATIONS.ANIM_ZORG_PLANET,
+            },
         };
-        
+
         const config = planetConfigs[p];
         if (config) {
             this.planetPreview.setTexture(config.texture);
-            this.planetPreview.play(p === P.EARTH ? ASSET_KEYS.ANIMATIONS.PLANET_ROTATE : config.anim);
+            this.planetPreview.play(
+                p === P.EARTH ? ASSET_KEYS.ANIMATIONS.PLANET_ROTATE : config.anim
+            );
         }
-        
+
         this.tweens.add({ targets: this.planetPreview, scale: 1.2, duration: 150, yoyo: true });
     }
 
@@ -297,11 +391,18 @@ export class ProfileScene extends Phaser.Scene {
         const a = this.avatars[this.avatarIdx];
         this.avatarPreview.setTexture(a);
         DataManager.setAvatar(a);
-        this.tweens.add({ targets: this.avatarPreview, scale: 0.5, duration: 100, yoyo: true, onComplete: () => this.avatarPreview.setScale(0.4) });
+        this.tweens.add({
+            targets: this.avatarPreview,
+            scale: 0.5,
+            duration: 100,
+            yoyo: true,
+            onComplete: () => this.avatarPreview.setScale(0.4),
+        });
     }
 
     updateSpecies(dir) {
-        this.speciesIdx = (this.speciesIdx + dir + this.speciesList.length) % this.speciesList.length;
+        this.speciesIdx =
+            (this.speciesIdx + dir + this.speciesList.length) % this.speciesList.length;
         const s = this.speciesList[this.speciesIdx];
         this.speciesTxt.setText(s);
         DataManager.setSpecies(s);

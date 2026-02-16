@@ -16,10 +16,10 @@ export const CombatManager = {
                 color: '#ff0000',
                 sound: ASSET_KEYS.AUDIO.SFX_LOSE,
                 playerHealthChange: -1,
-                cpuHealthChange: 0
+                cpuHealthChange: 0,
             };
         }
-        
+
         if (playerChoice === cpuChoice) {
             return {
                 result: 'DRAW',
@@ -27,18 +27,22 @@ export const CombatManager = {
                 color: CONFIG.THEME.primaryStr,
                 sound: ASSET_KEYS.AUDIO.SFX_TIE,
                 playerHealthChange: 0,
-                cpuHealthChange: 0
+                cpuHealthChange: 0,
             };
         }
 
-        if ((playerChoice === 0 && cpuChoice === 2) || (playerChoice === 1 && cpuChoice === 0) || (playerChoice === 2 && cpuChoice === 1)) {
+        if (
+            (playerChoice === 0 && cpuChoice === 2) ||
+            (playerChoice === 1 && cpuChoice === 0) ||
+            (playerChoice === 2 && cpuChoice === 1)
+        ) {
             return {
                 result: 'WIN',
                 text: 'YOU WIN!',
                 color: CONFIG.THEME.primaryStr,
                 sound: ASSET_KEYS.AUDIO.SFX_WIN,
                 playerHealthChange: 0,
-                cpuHealthChange: -1
+                cpuHealthChange: -1,
             };
         }
 
@@ -48,7 +52,7 @@ export const CombatManager = {
             color: CONFIG.THEME.secondaryStr,
             sound: ASSET_KEYS.AUDIO.SFX_LOSE,
             playerHealthChange: -1,
-            cpuHealthChange: 0
+            cpuHealthChange: 0,
         };
-    }
+    },
 };
