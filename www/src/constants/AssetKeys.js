@@ -38,6 +38,7 @@ export const ASSET_KEYS = {
         AVATAR_OSCAR: 'avatar_oscar',
         AVATAR_MICHAEL: 'avatar_michael',
         AVATAR_MATEO: 'avatar_mateo',
+        AVATAR_JOHN: 'player_avatar_john', // Key for John as an opponent
         AVATAR_ALIEN_5: 'avatar_alien_5',
 
         // Nuevas claves de avatares de perfil de jugador
