@@ -17,11 +17,15 @@ describe('OpponentAI', () => {
 
     describe('getChoice', () => {
         // Helper function to simulate random choices from smartStrategy
-        const mockRandomForStrategy = (initialRandomChoiceValue, smartChanceResult, strategyRandomResult) => {
+        const mockRandomForStrategy = (
+            initialRandomChoiceValue,
+            smartChanceResult,
+            strategyRandomResult
+        ) => {
             randomSpy
                 .mockReturnValueOnce(initialRandomChoiceValue) // For the first Math.random() in getChoice
-                .mockReturnValueOnce(smartChanceResult)       // Control smartChance check
-                .mockReturnValueOnce(strategyRandomResult);   // Control strategy choice
+                .mockReturnValueOnce(smartChanceResult) // Control smartChance check
+                .mockReturnValueOnce(strategyRandomResult); // Control strategy choice
         };
 
         it('should return a random choice if totalPlays is less than 3', () => {

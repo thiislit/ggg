@@ -109,8 +109,16 @@ export class GameScene extends Phaser.Scene {
             this.p2Health = enemy.stats.health;
             this.cpuName = enemy.name;
 
-            // Lógica de backgrounds para Quick Play
-            let quickPlayBackgroundPool = ['bg_purple']; // Fondo base para Quick Play
+            // Lógica de backgrounds para Quick Play (Pool aleatorio incluyendo los nuevos)
+            const quickPlayBackgroundPool = [
+                'bg_purple',
+                'bg_new_1',
+                'bg_new_2',
+                'bg_new_3',
+                'bg_new_4',
+                'bg_new_5',
+                'bg_new_6',
+            ];
 
             if (DataManager.hasCompletedStory()) {
                 quickPlayBackgroundPool.push(
@@ -124,7 +132,9 @@ export class GameScene extends Phaser.Scene {
             const selectedBg = quickPlayBackgroundPool[randomBgIndex];
 
             const bgScene = this.scene.get('BackgroundScene');
-            if (bgScene) bgScene.changeBackground(selectedBg);
+            if (bgScene) {
+                bgScene.changeBackground(selectedBg);
+            }
         }
 
         this.ui = new CombatUI(this, enemy); // Pass enemy here!
@@ -147,6 +157,9 @@ export class GameScene extends Phaser.Scene {
 
         // Iniciar en IDLE esperando al usuario
         this.setState(GAME_STATE.IDLE);
+
+        // --- EFECTO DE ENTRADA PROFESIONAL ---
+        this.cameras.main.fadeIn(500, 0, 0, 0);
 
         // Botón inicial de "PLAY"
         this.nextRondaBtn = this.ui.createNextRondaBtn('PLAY', this.barY);
@@ -210,13 +223,6 @@ export class GameScene extends Phaser.Scene {
         this.p2Status = this.ui.elements.p2NameTxt;
         this.timeText1 = this.ui.elements.timeText1;
         this.timeText2 = this.ui.elements.timeText2;
-
-        this.cameras.main.alpha = 0;
-        this.tweens.add({
-            targets: this.cameras.main,
-            alpha: 1,
-            duration: CONFIG.TIMING.FADE_DURATION,
-        });
     }
 
     // --- GAMEPLAY LOOP ---
@@ -236,6 +242,15 @@ export class GameScene extends Phaser.Scene {
                 if (b && b.destroy) b.destroy();
             });
             this.activeBubbles = [];
+        }
+
+        // Mostrar Intro si es el inicio de la partida
+        if (
+            this.p1Health === 3 &&
+            this.p2Health === this.currentOpponent.stats.health &&
+            this.playerStats.every((s) => s === 0)
+        ) {
+            this.showDialogue(false, 'INTRO');
         }
 
         this.ui.stopTimer();
@@ -330,6 +345,15 @@ export class GameScene extends Phaser.Scene {
         // Vibrate if player loses a point
         if (outcome.playerHealthChange < 0 && DataManager.isVibrateEnabled() && navigator.vibrate) {
             navigator.vibrate(100);
+        }
+
+        // Mostrar Diálogos según el resultado (Solo para la CPU)
+        if (outcome.result === 'WIN') {
+            this.showDialogue(false, 'LOSE'); // La CPU pierde la ronda
+        } else if (outcome.result === 'LOSE') {
+            this.showDialogue(false, 'WIN'); // La CPU gana la ronda
+        } else {
+            this.showDialogue(false, 'DRAW'); // Empate
         }
 
         // Actualizar UI
@@ -661,7 +685,7 @@ export class GameScene extends Phaser.Scene {
             : this.isPlayerRight
               ? CENTER_X * 0.5
               : CENTER_X * 1.5;
-        const targetY = LAYOUT.getAvatarY(height) + 140;
+        const targetY = LAYOUT.getAvatarY(height) + 160; // Bajado de 140 a 160 para evitar solapar el avatar
 
         const color = isP1 ? CONFIG.COLORS.P1_BLUE : CONFIG.COLORS.CPU_RED;
 

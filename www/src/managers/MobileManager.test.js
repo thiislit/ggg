@@ -56,15 +56,10 @@ describe('MobileManager', () => {
 
     it('should not initialize if window.Capacitor is not defined', () => {
         window.Capacitor = undefined; // Simulate non-Capacitor environment
-        const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {}); // Change to warn
 
         MobileManager.init(mockGame);
 
-        expect(consoleSpy).toHaveBeenCalledWith(
-            'Capacitor no detectado. Saltando inicialización de MobileManager.'
-        );
         expect(mockCapacitorApp.addListener).not.toHaveBeenCalled();
-        consoleSpy.mockRestore();
     });
 
     it('should not initialize if Capacitor.Plugins.App is not defined', () => {
@@ -74,15 +69,10 @@ describe('MobileManager', () => {
                 Plugins: {}, // App plugin missing
             },
         });
-        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         MobileManager.init(mockGame);
 
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-            'Capacitor App plugin no disponible. Algunas funcionalidades móviles no estarán activas.'
-        );
         expect(mockCapacitorApp.addListener).not.toHaveBeenCalled();
-        consoleWarnSpy.mockRestore();
     });
 
     it('should initialize backButton, pause, and resume listeners when Capacitor is available', () => {
@@ -105,11 +95,10 @@ describe('MobileManager', () => {
             backButtonCallback = mockCapacitorApp.addListener.mock.calls.find(
                 (call) => call[0] === 'backButton'
             )[1];
-            jest.spyOn(console, 'warn').mockImplementation(() => {}); // Suppress console.warn from handler
         });
 
         afterEach(() => {
-            jest.restoreAllMocks(); // Restore console.log
+            jest.restoreAllMocks();
         });
 
         it('should exit app if no active scenes', () => {

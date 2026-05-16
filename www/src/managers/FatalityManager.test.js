@@ -168,8 +168,14 @@ describe('FatalityManager', () => {
             expect(mockScene.add.graphics).toHaveBeenCalledTimes(1);
             expect(mockGraphics.lineStyle).toHaveBeenCalledWith(10, 0xffffff);
             expect(mockGraphics.beginPath).toHaveBeenCalledTimes(1);
-            expect(mockGraphics.moveTo).toHaveBeenCalledWith(mockTarget.x - 100, mockTarget.y - 100);
-            expect(mockGraphics.lineTo).toHaveBeenCalledWith(mockTarget.x + 100, mockTarget.y + 100);
+            expect(mockGraphics.moveTo).toHaveBeenCalledWith(
+                mockTarget.x - 100,
+                mockTarget.y - 100
+            );
+            expect(mockGraphics.lineTo).toHaveBeenCalledWith(
+                mockTarget.x + 100,
+                mockTarget.y + 100
+            );
             expect(mockGraphics.setDepth).toHaveBeenCalledWith(200);
             expect(mockGraphics.strokePath).toHaveBeenCalledTimes(1);
             expect(mockGraphics.setAlpha).toHaveBeenCalledWith(0);

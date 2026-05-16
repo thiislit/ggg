@@ -2,7 +2,6 @@
 
 import { TutorialManager } from './TutorialManager.js';
 import { DataManager } from './DataManager.js';
-import { CONFIG } from '../data/config.js'; // Import CONFIG for its structure
 
 jest.mock('../data/config.js', () => ({
     CONFIG: {
@@ -42,17 +41,6 @@ const mockConfigColors = {
     P1_BLUE: 0x0000ff,
     TEXT_MAIN: '#ffffff',
 };
-const mockConfigFonts = {
-    MAIN: 'Press Start 2P',
-    SIZES: {
-        NORMAL: '16px',
-    },
-};
-const mockConfigTheme = {
-    primary: 0x1a2b3c,
-};
-
-
 
 describe('TutorialManager', () => {
     let mockScene;
@@ -119,7 +107,6 @@ describe('TutorialManager', () => {
         tutorialManager = new TutorialManager(mockScene);
     });
 
-
     describe('constructor', () => {
         it('should assign the scene and initialize tutorialContainer to null', () => {
             expect(tutorialManager.scene).toBe(mockScene);
@@ -155,8 +142,9 @@ describe('TutorialManager', () => {
 
         beforeEach(() => {
             // Mock the button's interactive rect and capture its pointerdown
-            mockScene.add.rectangle.mockImplementation((x, y, w, h, color) => {
-                if (w === 200 && h === 60) { // This is the button rect
+            mockScene.add.rectangle.mockImplementation((x, y, w, h, _color) => {
+                if (w === 200 && h === 60) {
+                    // This is the button rect
                     btnRectMock = {
                         setOrigin: jest.fn().mockReturnThis(),
                         setStrokeStyle: jest.fn().mockReturnThis(),

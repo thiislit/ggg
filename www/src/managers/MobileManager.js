@@ -2,7 +2,7 @@
 
 /**
  * Manager para la lógica específica de dispositivos móviles y Capacitor.
- * Centraliza la gestión del botón de retroceso de Android y el ciclo de vida de la aplicación.
+ * Centraliza la gestión del botón de retroceso de Android, el ciclo de vida de la aplicación y la vibración háptica.
  */
 export const MobileManager = {
     /**
@@ -11,16 +11,12 @@ export const MobileManager = {
      */
     init: function (game) {
         if (!window.Capacitor) {
-            console.log('Capacitor no detectado. Saltando inicialización de MobileManager.');
             return;
         }
 
         const App = window.Capacitor.Plugins.App;
 
         if (!App) {
-            console.log(
-                'Capacitor App plugin no disponible. Algunas funcionalidades móviles no estarán activas.'
-            );
             return;
         }
 
@@ -36,8 +32,6 @@ export const MobileManager = {
             // Tomamos la última escena activa (la que está "encima")
             const currentScene = activeScenes[activeScenes.length - 1];
             const key = currentScene.scene.key;
-
-            console.log('Back button pressed in:', key);
 
             if (key === 'MainMenuScene') {
                 App.exitApp();
@@ -64,7 +58,42 @@ export const MobileManager = {
         App.addListener('resume', () => {
             game.sound.resumeAll();
         });
+    },
 
-        console.log('MobileManager inicializado para Capacitor.');
+    /**
+     * Ejecuta una vibración háptica basada en la intensidad.
+     * @param {string} style - El estilo de la vibración: 'LIGHT', 'MEDIUM', 'HEAVY'. Por defecto 'MEDIUM'.
+     */
+    vibrate: function (style = 'MEDIUM') {
+        if (!window.Capacitor || !window.Capacitor.Plugins.Haptics) {
+            // Fallback para vibración estándar si Capacitor no está pero el navegador lo soporta
+            if (navigator.vibrate) {
+                navigator.vibrate(style === 'HEAVY' ? 200 : style === 'MEDIUM' ? 100 : 50);
+            }
+            return;
+        }
+
+        const Haptics = window.Capacitor.Plugins.Haptics;
+
+        switch (style.toUpperCase()) {
+            case 'LIGHT':
+                Haptics.impact({ style: 'LIGHT' });
+                break;
+            case 'MEDIUM':
+                Haptics.impact({ style: 'MEDIUM' });
+                break;
+            case 'HEAVY':
+                Haptics.impact({ style: 'HEAVY' });
+                break;
+            case 'SUCCESS':
+                Haptics.notification({ type: 'SUCCESS' });
+                break;
+            case 'ERROR':
+                Haptics.notification({ type: 'ERROR' });
+                break;
+            default:
+                Haptics.vibrate();
+                break;
+        }
     },
 };

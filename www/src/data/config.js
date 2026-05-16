@@ -11,7 +11,6 @@ export const CONFIG = {
     },
 
     // --- SISTEMA DE COLORES CENTRALIZADO ---
-    // Paletas predefinidas por fondo
     PALETTES: {
         bg_green: { PRIMARY: 0x00ff41, SECONDARY: 0x008f11 }, // Verde Clásico
         bg_purple: { PRIMARY: 0xdf00ff, SECONDARY: 0x7a008c }, // Morado Neón

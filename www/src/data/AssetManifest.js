@@ -1,13 +1,13 @@
 export const ASSETS = {
     AUDIO: {
         SFX: [
-            { key: 'sfx_rock', path: 'assets/sounds/rockrock-select.mp3' },
-            { key: 'sfx_paper', path: 'assets/sounds/paperpaper-select.mp3' },
+            { key: 'sfx_rock', path: 'assets/sounds/rock-select.mp3' },
+            { key: 'sfx_paper', path: 'assets/sounds/paper-select.mp3' },
             { key: 'sfx_scissors', path: 'assets/sounds/scissors-select.mp3' },
-            { key: 'sfx_reveal', path: 'assets/sounds/reveal-reveal.mp3' },
-            { key: 'sfx_win', path: 'assets/sounds/yooo-win.mp3' },
-            { key: 'sfx_lose', path: 'assets/sounds/whywhy-lose.mp3' },
-            { key: 'sfx_tie', path: 'assets/sounds/tietie-tie.mp3' },
+            { key: 'sfx_reveal', path: 'assets/sounds/reveal.mp3' },
+            { key: 'sfx_win', path: 'assets/sounds/win.mp3' },
+            { key: 'sfx_lose', path: 'assets/sounds/lose.mp3' },
+            { key: 'sfx_tie', path: 'assets/sounds/tie.mp3' },
             { key: 'sfx_button', path: 'assets/sounds/button-click.mp3' },
         ],
         MUSIC: [{ key: 'bgm', path: 'assets/sounds/background.mp3' }],
@@ -33,6 +33,12 @@ export const ASSETS = {
             { key: 'bg_campaign_easy', path: 'assets/backgrounds/bg_campaign_easy.png' },
             { key: 'bg_campaign_medium', path: 'assets/backgrounds/bg_campaign_medium.png' },
             { key: 'bg_campaign_hard', path: 'assets/backgrounds/bg_campaign_hard.png' },
+            { key: 'bg_new_1', path: 'assets/backgrounds/bg_new_1.png' },
+            { key: 'bg_new_2', path: 'assets/backgrounds/bg_new_2.png' },
+            { key: 'bg_new_3', path: 'assets/backgrounds/bg_new_3.png' },
+            { key: 'bg_new_4', path: 'assets/backgrounds/bg_new_4.png' },
+            { key: 'bg_new_5', path: 'assets/backgrounds/bg_new_5.png' },
+            { key: 'bg_new_6', path: 'assets/backgrounds/bg_new_6.png' },
         ],
         AVATARS: [
             { key: 'avatar_human_1', path: 'assets/avatars/human_1.png' },
@@ -70,6 +76,7 @@ export const ASSETS = {
             { key: 'princess_2', path: 'assets/images/story/princess_2.png' },
             { key: 'princess_3', path: 'assets/images/story/princess_3.png' },
             { key: 'princess_4', path: 'assets/images/story/princess_4.png' },
+            { key: 'logo_rps', path: 'assets/images/rpsretro.png' },
         ],
     },
     SPRITESHEETS: [

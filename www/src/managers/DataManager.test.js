@@ -140,13 +140,6 @@ describe('DataManager', () => {
             expect(DataManager.settings).toEqual(defaultSettings);
             expect(DataManager.session).toEqual(defaultSession);
         });
-
-        it('should log a warning if DataManager initialized', async () => {
-            const consoleWarnSpy = jest.spyOn(console, 'warn');
-            await DataManager.init();
-            expect(consoleWarnSpy).toHaveBeenCalledWith('DataManager initialized.');
-            consoleWarnSpy.mockRestore();
-        });
     });
 
     // --- SETTERS tests ---
@@ -299,13 +292,6 @@ describe('DataManager', () => {
         it('clear should clear all data from Storage', async () => {
             await DataManager.clear();
             expect(Storage.clear).toHaveBeenCalledTimes(1);
-        });
-
-        it('clear should log a warning', async () => {
-            const consoleWarnSpy = jest.spyOn(console, 'warn');
-            await DataManager.clear();
-            expect(consoleWarnSpy).toHaveBeenCalledWith('DataManager data cleared.');
-            consoleWarnSpy.mockRestore();
         });
     });
 

@@ -17,24 +17,45 @@ export class SplashScene extends Phaser.Scene {
         // --- TÍTULO (Durante Carga) ---
         this.tempTitle = this.createRingTitle(width / 2, height * 0.3);
 
-        // --- BARRA DE CARGA ---
-        const progressBar = this.add.graphics();
+        // --- BARRA DE CARGA RETRO-ESTILIZADA ---
+        const progressBarWidth = 320;
+        const progressBarHeight = 24;
+        const x = width / 2 - progressBarWidth / 2;
+        const y = height / 2 + 100;
+
+        // Fondo de la barra (Marco pixelado)
         const progressBox = this.add.graphics();
-        progressBox.fillStyle(0x222222, 0.8);
-        progressBox.fillRect(width / 2 - 160, height / 2 + 100, 320, 30);
+        progressBox.lineStyle(4, 0x555555, 1);
+        progressBox.strokeRect(x, y, progressBarWidth, progressBarHeight);
+        progressBox.fillStyle(0x000000, 0.8);
+        progressBox.fillRect(x, y, progressBarWidth, progressBarHeight);
+
+        const progressBar = this.add.graphics();
 
         this.load.on('progress', (value) => {
             progressBar.clear();
+
+            // Color de la barra (Cian neón estilo retro)
             progressBar.fillStyle(CONFIG.COLORS.P1_BLUE, 1);
-            progressBar.fillRect(width / 2 - 150, height / 2 + 110, 300 * value, 10);
+
+            // Dibujar barra segmentada (estilo bloques)
+            const padding = 4;
+            const fullWidth = (progressBarWidth - padding * 2) * value;
+            const segmentWidth = 10;
+            const numSegments = Math.floor(fullWidth / segmentWidth);
+
+            for (let i = 0; i < numSegments; i++) {
+                progressBar.fillRect(
+                    x + padding + i * segmentWidth,
+                    y + padding,
+                    segmentWidth - 2,
+                    progressBarHeight - padding * 2
+                );
+            }
         });
 
         this.load.on('complete', () => {
-            progressBar.clear();
-            progressBar.fillStyle(CONFIG.COLORS.P1_BLUE, 1);
-            progressBar.fillRect(width / 2 - 150, height / 2 + 110, 300, 10);
-
-            this.time.delayedCall(800, () => {
+            this.time.delayedCall(500, () => {
                 this.tweens.add({
                     targets: [progressBar, progressBox],
                     alpha: 0,
@@ -275,6 +296,9 @@ export class SplashScene extends Phaser.Scene {
                     case 'settings':
                         this.scene.start('SettingsScene');
                         break;
+                    case 'epilogue':
+                        this.scene.start('EpilogueScene');
+                        break;
                 }
             });
             return;
@@ -305,17 +329,20 @@ export class SplashScene extends Phaser.Scene {
         const fontSize = '48px';
         const color = CONFIG.COLORS.TEXT_MAIN;
 
-        // --- ANILLO DE FONDO DIFUSO (EFECTO GRAVEDAD/BLUR) ---
-        const bgRing = this.add.graphics();
-        const thickness = 140;
+        // --- ANILLOS CONCÉNTRICOS ESTILO PIXEL-ART (Nítidos) ---
+        const rings = this.add.graphics();
 
-        for (let i = 0; i < thickness; i++) {
-            const alpha = 0.4 * Math.pow(1 - i / thickness, 2);
-            bgRing.lineStyle(2, 0x000000, alpha);
-            bgRing.strokeCircle(0, 0, radius + thickness * 0.5 - i);
-            bgRing.strokeCircle(0, 0, radius - thickness * 0.5 + i);
-        }
-        container.add(bgRing);
+        // Dibujamos anillos sólidos con opacidades fijas para evitar el blur
+        rings.lineStyle(8, 0x000000, 0.5);
+        rings.strokeCircle(0, 0, radius + 20);
+
+        rings.lineStyle(4, 0x000000, 0.3);
+        rings.strokeCircle(0, 0, radius + 40);
+
+        rings.lineStyle(2, 0x000000, 0.15);
+        rings.strokeCircle(0, 0, radius + 60);
+
+        container.add(rings);
 
         const letterSpacingAngle = 17;
 
@@ -399,20 +426,37 @@ export class SplashScene extends Phaser.Scene {
             },
         });
 
-        // BOTÓN DE INICIO PREMIUM (Usando Componente Reutilizable)
-        new RetroButton(
+        // BOTÓN DE INICIO PREMIUM (Estilo Arcade con Parpadeo)
+        const startBtn = new RetroButton(
             this,
             width / 2,
             height * 0.63,
             'TAP TO START',
             CONFIG.COLORS.P1_BLUE,
             () => {
-                if (!DataManager.hasSeenIntro()) {
-                    this.scene.start('StoryScene');
-                } else {
-                    this.scene.start('ProfileScene');
-                }
+                // Transición de salida profesional más rápida (400ms)
+                this.cameras.main.fadeOut(400, 0, 0, 0);
+                this.cameras.main.once('camerafadeoutcomplete', () => {
+                    // Pequeño delay de seguridad (50ms) para asegurar negro total
+                    this.time.delayedCall(50, () => {
+                        if (!DataManager.hasSeenIntro()) {
+                            this.scene.start('StoryScene');
+                        } else {
+                            this.scene.start('ProfileScene');
+                        }
+                    });
+                });
             }
         );
+
+        // Añadir parpadeo clásico estilo Arcade
+        this.tweens.add({
+            targets: startBtn,
+            alpha: 0.3,
+            duration: 600,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Steps(1)', // Cambio brusco para estilo retro
+        });
     }
 }

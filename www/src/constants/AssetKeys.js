@@ -29,6 +29,12 @@ export const ASSET_KEYS = {
         BG_CAMPAIGN_EASY: 'bg_campaign_easy',
         BG_CAMPAIGN_MEDIUM: 'bg_campaign_medium',
         BG_CAMPAIGN_HARD: 'bg_campaign_hard',
+        BG_NEW_1: 'bg_new_1',
+        BG_NEW_2: 'bg_new_2',
+        BG_NEW_3: 'bg_new_3',
+        BG_NEW_4: 'bg_new_4',
+        BG_NEW_5: 'bg_new_5',
+        BG_NEW_6: 'bg_new_6',
 
         // Nuevas claves de avatares
         AVATAR_ZORG: 'avatar_zorg', // Actualizado para coincidir con AssetManifest

@@ -24,7 +24,7 @@ export class OpponentAI {
             const winningMove = (mostUsed + 1) % 3; // Lo que gana al más usado
             const losingMove = (mostUsed + 2) % 3; // Lo que pierde contra el más usado
             const tyingMove = mostUsed; // Lo que empata con el más usado
-            
+
             let smartStrategy = [];
             if (diff === 'MEDIUM') {
                 // 60% ganar, 20% empatar, 20% perder (simular variabilidad)

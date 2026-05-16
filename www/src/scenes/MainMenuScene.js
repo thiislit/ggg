@@ -159,18 +159,17 @@ export class MainMenuScene extends Phaser.Scene {
             })
             .setOrigin(1, 1);
 
-        // Efecto de entrada suave
-        this.cameras.main.alpha = 0;
-        this.tweens.add({
-            targets: this.cameras.main,
-            alpha: 1,
-            duration: CONFIG.TIMING.FADE_DURATION,
-        });
+        // --- EFECTO DE ENTRADA PROFESIONAL ---
+        this.cameras.main.fadeIn(500, 0, 0, 0);
 
         // --- DEV CHEATS (ATAJOS DE TECLADO) ---
         this.input.keyboard.on('keydown-ONE', () => this.startDevCampaign(1));
         this.input.keyboard.on('keydown-TWO', () => this.startDevCampaign(2));
         this.input.keyboard.on('keydown-THREE', () => this.startDevCampaign(3));
+        this.input.keyboard.on('keydown-E', () => {
+            console.warn('[DEV] Jumping to EpilogueScene');
+            this.scene.start('EpilogueScene');
+        });
     }
 
     startDevCampaign(level) {
@@ -181,13 +180,13 @@ export class MainMenuScene extends Phaser.Scene {
     }
 
     goToGame() {
-        this.tweens.add({
-            targets: this.cameras.main,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => {
+        // Transición de salida profesional más rápida (400ms)
+        this.cameras.main.fadeOut(400, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            // Pequeño delay de seguridad (50ms) para asegurar negro total
+            this.time.delayedCall(50, () => {
                 this.scene.start('GameScene');
-            },
+            });
         });
     }
 }

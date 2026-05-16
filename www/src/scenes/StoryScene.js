@@ -307,10 +307,9 @@ export class StoryScene extends Phaser.Scene {
             i++;
             charCount++;
 
-            // Reproducir sonido cada 3 letras para no saturar
+            // Reproducir sonido cada 3 letras para no saturar usando el volumen global de SFX
             if (charCount % 3 === 0 && char !== ' ') {
                 AudioManager.playSFX(this, ASSET_KEYS.AUDIO.STORY_SFX_TYPE, {
-                    volume: 0.3,
                     detune: Math.random() * 200 - 100,
                 });
             }

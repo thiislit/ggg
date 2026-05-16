@@ -18,8 +18,8 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     }
 
     init() {
-        const bubbleWidth = 350; // Se mantiene local por ahora, podría moverse a CONFIG.UI si se usa en más sitios
-        const padding = 20; // Se mantiene local por ahora
+        const bubbleWidth = 220; // Ajustado para coincidir con el ancho del frame del avatar (220px)
+        const padding = 15; // Reducido un poco para aprovechar mejor el espacio
 
         this.typingTimer = null; // Para poder cancelarlo
 
@@ -92,15 +92,18 @@ export class DialogueBox extends Phaser.GameObjects.Container {
                 }
                 this.content.text += this.quote[i];
 
-                // Reproducir sonido de escritura
+                // Reproducir sonido de escritura usando el volumen global de SFX
                 AudioManager.playSFX(this.scene, ASSET_KEYS.AUDIO.STORY_SFX_TYPE, {
-                    volume: 0.3,
                     detune: Math.random() * 200 - 100,
                 });
 
                 i++;
                 if (i === this.quote.length) {
                     this.scene.events.emit('dialogue-typing-complete');
+                    // Auto-ocultar después de un tiempo para que no se acumulen
+                    this.scene.time.delayedCall(3000, () => {
+                        if (this.active) this.hide();
+                    });
                 }
             },
             repeat: this.quote.length - 1,
@@ -120,10 +123,18 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     }
 
     hide() {
+        if (this.isHiding) return Promise.resolve();
+        this.isHiding = true;
+
         if (this.typingTimer) {
             this.typingTimer.remove();
         }
         return new Promise((resolve) => {
+            if (!this.scene || !this.scene.tweens) {
+                this.destroy();
+                resolve();
+                return;
+            }
             this.scene.tweens.add({
                 targets: this,
                 alpha: 0,

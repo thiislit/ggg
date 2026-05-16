@@ -27,7 +27,6 @@ export const CampaignManager = {
         this.state.isActive = true;
         this.state.currentLevel = 1;
         this.state.winsInRow = 0;
-        console.log('Campaign Started: Level 1');
     },
 
     stopCampaign() {
@@ -49,7 +48,6 @@ export const CampaignManager = {
         if (!this.state.isActive) return null;
 
         this.state.winsInRow++;
-        console.log(`Campaign Win: ${this.state.winsInRow}/${this.state.targetWins}`);
 
         if (this.state.winsInRow >= this.state.targetWins) {
             return this.advanceLevel();
@@ -62,7 +60,6 @@ export const CampaignManager = {
         if (!this.state.isActive) return null;
 
         this.state.winsInRow = 0; // Reiniciar racha del nivel actual
-        console.log('Campaign Loss: Progress Reset for Level ' + this.state.currentLevel);
         return { status: 'RETRY_LEVEL', level: this.state.currentLevel };
     },
 

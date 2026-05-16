@@ -119,8 +119,6 @@ export const DataManager = {
         this.session.introSeen = await Storage.get(KEYS.INTRO_SEEN, false);
         this.session.tutorialSeen = await Storage.get(KEYS.TUTORIAL_SEEN, false);
         this.session.storyCompleted = await Storage.get(KEYS.STORY_COMPLETED, false); // Cargar aquí
-
-        console.log('DataManager initialized.');
     },
 
     // --- SETTERS CON PERSISTENCIA ---
@@ -321,7 +319,6 @@ export const DataManager = {
      */
     async clear() {
         await Storage.clear();
-        console.log('DataManager data cleared.');
     },
 
     // --- GETTERS ---

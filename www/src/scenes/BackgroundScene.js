@@ -70,12 +70,53 @@ export class BackgroundScene extends Phaser.Scene {
             .play(ASSET_KEYS.ANIMATIONS.ANIM_CAMPAIGN_BLACKHOLE);
     }
 
+    applyBackgroundAnimations() {
+        // Detener tweens previos en el objeto para evitar que luchen entre sí
+        this.tweens.killTweensOf(this.bgStatic);
+
+        // --- LÓGICA DE ESCALADO "COVER" (Mantener proporción) ---
+        const width = this.scale.width;
+        const height = this.scale.height;
+        const scaleX = width / this.bgStatic.width;
+        const scaleY = height / this.bgStatic.height;
+        const scale = Math.max(scaleX, scaleY);
+
+        this.bgStatic.setScale(scale);
+
+        // --- ANIMACIÓN DE PALPITAR (Zoom suave) ---
+        // Usamos la escala de "Cover" calculada como base
+        this.tweens.add({
+            targets: this.bgStatic,
+            scale: scale * 1.04,
+            duration: 3000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+
+        // --- ANIMACIÓN DE RESPIRAR (Opacidad) ---
+        this.tweens.add({
+            targets: this.bgStatic,
+            alpha: 0.85,
+            duration: 2500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+    }
+
     changeBackground(textureKey) {
         if (this.bgStatic) {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
             this.bgStatic.setVisible(true);
-            // Always set the static background to the hard campaign background
-            this.bgStatic.setTexture(ASSET_KEYS.IMAGES.BG_CAMPAIGN_HARD);
+            this.bgStatic.setTexture(textureKey);
+            this.bgStatic.setDisplaySize(width, height); // Forzar tamaño de pantalla
             this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
+
+            // Reiniciar animaciones para que usen la nueva escala como base
+            this.applyBackgroundAnimations();
 
             // Ensure no tint from previous states
             this.bgStatic.clearTint();
