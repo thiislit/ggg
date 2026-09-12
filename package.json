@@ -5,12 +5,13 @@
   "type": "module",
   "main": "src/main.js",
   "scripts": {
-    "sync": "powershell -Command \"Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass\" && npx cap sync",
+    "sync": "npx cap sync",
     "force-android": "powershell -Command \"cd android; .\\gradlew installDebug\"",
     "update": "npm run sync && npm run force-android",
     "start": "http-server www -o",
     "test": "jest",
     "lint": "eslint \"www/src/**/*.js\"",
+    "verify": "npm run lint && npm test -- --runInBand",
     "lint:fix": "eslint \"www/src/**/*.js\" --fix",
     "format": "prettier --write \"{src,www}/**/*.{js,jsx}\""
   },
@@ -19,8 +20,10 @@
   "license": "ISC",
   "dependencies": {
     "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.0.0",
     "@capacitor/preferences": "^8.0.0",
     "@sentry/browser": "^10.38.0",

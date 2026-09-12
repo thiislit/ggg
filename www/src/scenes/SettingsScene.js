@@ -12,6 +12,11 @@ export class SettingsScene extends Phaser.Scene {
 
     async create() {
         const { width, height } = this.scale;
+
+        // Sincronizar CONFIG.THEME con el tema guardado antes de instanciar UI
+        const currentBgId = DataManager.getBgTheme();
+        CONFIG.THEME.setFromPalette(currentBgId);
+
         const colors = CONFIG.THEME;
 
         // 1. Fondo bloqueador
@@ -89,7 +94,7 @@ export class SettingsScene extends Phaser.Scene {
             DataManager.setIsMuted(newState);
         });
         this.muteSwitch.setX(width / 2 + 30);
-        this.add
+        this.muteLabel = this.add
             .text(width / 2 - 140, startY, 'MUTE GAME', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
@@ -109,7 +114,7 @@ export class SettingsScene extends Phaser.Scene {
             }
         );
         this.vibrateSwitch.setX(width / 2 + 30);
-        this.add
+        this.vibrateLabel = this.add
             .text(width / 2 - 140, startY + rowStep, 'VIBRATION', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
@@ -130,7 +135,7 @@ export class SettingsScene extends Phaser.Scene {
             }
         );
         this.bgDimSwitch.setX(width / 2 + 30);
-        this.add
+        this.bgDimLabel = this.add
             .text(width / 2 - 140, startY + rowStep * 2, 'BG DIM', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
@@ -144,7 +149,6 @@ export class SettingsScene extends Phaser.Scene {
             { id: ASSET_KEYS.IMAGES.BG_PURPLE, name: 'PURPLE' },
             { id: ASSET_KEYS.IMAGES.BG_BLUE, name: 'BLUE' },
         ];
-        let currentBgId = DataManager.getBgTheme();
         let bgIdx = bgThemes.findIndex((t) => t.id === currentBgId);
         if (bgIdx === -1) bgIdx = 1;
 
@@ -184,6 +188,7 @@ export class SettingsScene extends Phaser.Scene {
         const updateTheme = (dir) => {
             bgIdx = (bgIdx + dir + bgThemes.length) % bgThemes.length;
             const theme = bgThemes[bgIdx];
+            CONFIG.THEME.setFromPalette(theme.id);
             DataManager.setBgTheme(theme.id);
 
             this.themeValue.setText(theme.name);
@@ -331,6 +336,10 @@ export class SettingsScene extends Phaser.Scene {
         this.title.setFill(c.PRIMARY_STR);
         this.musicLabel.setFill(c.PRIMARY_STR);
         this.sfxLabel.setFill(c.PRIMARY_STR);
+
+        if (this.muteLabel) this.muteLabel.setFill(c.PRIMARY_STR);
+        if (this.vibrateLabel) this.vibrateLabel.setFill(c.PRIMARY_STR);
+        if (this.bgDimLabel) this.bgDimLabel.setFill(c.PRIMARY_STR);
 
         // Llamar a refreshColors en los nuevos componentes
         this.musicSlider.refreshColors();

@@ -12,6 +12,7 @@ import { DialogueBox } from '../ui/components/DialogueBox.js';
 import { LAYOUT } from '../data/Layout.js';
 import { ASSET_KEYS } from '../constants/AssetKeys.js';
 import { TutorialManager } from '../managers/TutorialManager.js'; // Import TutorialManager
+import { ChoiceControls } from '../ui/components/ChoiceControls.js';
 
 // --- MÁQUINA DE ESTADOS FINITA ---
 const GAME_STATE = {
@@ -109,8 +110,9 @@ export class GameScene extends Phaser.Scene {
             this.p2Health = enemy.stats.health;
             this.cpuName = enemy.name;
 
-            // Lógica de backgrounds para Quick Play (Pool aleatorio incluyendo los nuevos)
-            const quickPlayBackgroundPool = [
+            // Lógica de backgrounds para Quick Play
+            let selectedBg;
+            const standardBackgrounds = [
                 'bg_purple',
                 'bg_new_1',
                 'bg_new_2',
@@ -121,15 +123,21 @@ export class GameScene extends Phaser.Scene {
             ];
 
             if (DataManager.hasCompletedStory()) {
-                quickPlayBackgroundPool.push(
-                    'bg_campaign_easy',
-                    'bg_campaign_medium',
-                    'bg_campaign_hard'
-                );
+                // Al completar la historia, los fondos épicos de campaña tienen 70% de probabilidad
+                const roll = Phaser.Math.Between(1, 100);
+                if (roll <= 70) {
+                    const campaignBackgrounds = [
+                        ASSET_KEYS.IMAGES.BG_CAMPAIGN_EASY,
+                        ASSET_KEYS.IMAGES.BG_CAMPAIGN_MEDIUM,
+                        ASSET_KEYS.IMAGES.BG_CAMPAIGN_HARD,
+                    ];
+                    selectedBg = Phaser.Utils.Array.GetRandom(campaignBackgrounds);
+                } else {
+                    selectedBg = Phaser.Utils.Array.GetRandom(standardBackgrounds);
+                }
+            } else {
+                selectedBg = Phaser.Utils.Array.GetRandom(standardBackgrounds);
             }
-
-            const randomBgIndex = Phaser.Math.Between(0, quickPlayBackgroundPool.length - 1);
-            const selectedBg = quickPlayBackgroundPool[randomBgIndex];
 
             const bgScene = this.scene.get('BackgroundScene');
             if (bgScene) {
@@ -197,7 +205,12 @@ export class GameScene extends Phaser.Scene {
         this.ui.updateBarPositions(this.isPlayerRight, width);
 
         // 4. Botones y Controles
-        this.createResponsiveButtons(width, height, FOOT_Y);
+        this.choiceControls = new ChoiceControls(this, (choiceIndex) =>
+            this.handleInput(choiceIndex)
+        );
+        const controls = this.choiceControls.create(width, height, FOOT_Y, this.isPlayerRight);
+        this.p1Buttons = controls.playerButtons;
+        this.p2Buttons = controls.cpuButtons;
         this.ui.initControls(width, height, 20);
 
         // Posicionar el indicador de la IA inicialmente
@@ -478,54 +491,6 @@ export class GameScene extends Phaser.Scene {
 
     // --- UI HELPERS & INPUTS ---
 
-    createResponsiveButtons(width, height, footerTop) {
-        this.p1Buttons = [];
-        this.p2Buttons = [];
-        const choices = ['ROCK', 'PAPER', 'SCISSORS'];
-        const emojis = ['✊', '✋', '✌️'];
-
-        const startY = footerTop || LAYOUT.getGridBottom(height);
-
-        const p1X = LAYOUT.getColumnX(width, this.isPlayerRight);
-        const p2X = LAYOUT.getColumnX(width, !this.isPlayerRight);
-
-        choices.forEach((name, i) => {
-            const yPos = startY + LAYOUT.BUTTONS.START_OFFSET + i * LAYOUT.BUTTONS.SPACING;
-            this.p1Buttons[i] = this.makeSingleBtn(p1X, yPos, name, emojis[i], true, i);
-            this.p2Buttons[i] = this.makeSingleBtn(p2X, yPos, name, emojis[i], false, i);
-        });
-    }
-
-    makeSingleBtn(x, y, name, emoji, isP1, index) {
-        let container = this.add.container(x, y).setDepth(500);
-        const borderColor = CONFIG.THEME.primary;
-        const bg = this.add
-            .circle(0, 0, 38, 0x000000, 0.1)
-            .setStrokeStyle(CONFIG.UI.BORDER_WIDTH, borderColor);
-
-        const emo = this.add
-            .text(0, 0, emoji, { fontSize: CONFIG.FONTS.SIZES.EMOJI, padding: { x: 10, y: 10 } })
-            .setOrigin(0.5);
-        const filter = this.add.circle(0, 0, 38, 0x000000, 0.4);
-        const txt = this.add
-            .text(0, 50, name, {
-                fontFamily: CONFIG.FONTS.MAIN,
-                fontSize: CONFIG.FONTS.SIZES.SMALL,
-                fill: CONFIG.THEME.primaryStr,
-            })
-            .setOrigin(0.5);
-
-        container.add([bg, emo, filter, txt]);
-
-        if (isP1) {
-            bg.setInteractive({ useHandCursor: true });
-            bg.on('pointerdown', () => {
-                this.handleInput(index);
-            });
-        }
-        return container;
-    }
-
     setupNextRoundBtnListeners() {
         if (!this.nextRondaBtn) return;
         this.nextRondaBtn.on('pointerdown', () => {
@@ -554,9 +519,6 @@ export class GameScene extends Phaser.Scene {
         this.ui.updateMainMargins(width, height);
 
         const CENTER_X = width * LAYOUT.COLUMNS.CENTER;
-        const p1X = LAYOUT.getColumnX(width, this.isPlayerRight);
-        const p2X = LAYOUT.getColumnX(width, !this.isPlayerRight);
-
         const p1TargetX = this.isPlayerRight ? CENTER_X * 1.5 : CENTER_X * 0.5;
         const p2TargetX = this.isPlayerRight ? CENTER_X * 0.5 : CENTER_X * 1.5;
 
@@ -610,12 +572,7 @@ export class GameScene extends Phaser.Scene {
         this.p2Emoji.setFlipX(this.isPlayerRight);
 
         // Mover botones y textos
-        this.p1Buttons.forEach((btn) => {
-            if (btn) this.tweens.add({ targets: btn, x: p1X, duration: 400, ease: 'Back.easeOut' });
-        });
-        this.p2Buttons.forEach((btn) => {
-            if (btn) this.tweens.add({ targets: btn, x: p2X, duration: 400, ease: 'Back.easeOut' });
-        });
+        this.choiceControls.move(this.isPlayerRight, width);
         this.tweens.add({
             targets: this.timeText1,
             x: LAYOUT.getColumnX(width, true),
@@ -633,19 +590,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     resetButtonColors() {
-        const textMain = CONFIG.THEME.primaryStr;
-        [this.p1Buttons, this.p2Buttons].forEach((group) => {
-            if (group) {
-                group.forEach((btn) => {
-                    if (btn) {
-                        const bg = btn.list[0];
-                        const txt = btn.list[3];
-                        if (bg) bg.setFillStyle(0x000000, 0.1);
-                        if (txt) txt.setFill(textMain);
-                    }
-                });
-            }
-        });
+        this.choiceControls.resetColors();
     }
 
     // --- UTILIDADES ---
@@ -695,7 +640,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     applyTheme() {
-        const theme = CONFIG.THEME;
         const bgDim = DataManager.isBgDim();
         const bgScene = this.scene.get('BackgroundScene');
         if (bgScene && bgScene.applyDim) {
@@ -704,18 +648,7 @@ export class GameScene extends Phaser.Scene {
 
         this.ui.applyTheme();
 
-        this.p1Buttons.forEach((btn) => {
-            if (btn) {
-                const bg = btn.list[0]; // Assuming the background is the first element in the container
-                if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, theme.PRIMARY);
-            }
-        });
-        this.p2Buttons.forEach((btn) => {
-            if (btn) {
-                const bg = btn.list[0]; // Assuming the background is the first element in the container
-                if (bg) bg.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, theme.SECONDARY);
-            }
-        });
+        this.choiceControls.applyTheme();
 
         this.updateMuteIcon();
     }

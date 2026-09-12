@@ -109,6 +109,7 @@ export const DataManager = {
         // Cargar Configuración
         this.settings.difficulty = await Storage.get(KEYS.DIFFICULTY, 'MEDIUM');
         this.settings.bgTheme = await Storage.get(KEYS.BG_THEME, 'bg_purple');
+        CONFIG.THEME.setFromPalette(this.settings.bgTheme); // Sincronizar paleta con el tema cargado
         this.settings.isMuted = await Storage.get(KEYS.IS_MUTED, false);
         this.settings.vibrate = await Storage.get(KEYS.VIBRATE, true);
         this.settings.bgDim = await Storage.get(KEYS.BG_DIM, false);
@@ -200,8 +201,8 @@ export const DataManager = {
      */
     async setBgTheme(themeId) {
         this.settings.bgTheme = themeId;
+        CONFIG.THEME.setFromPalette(themeId); // Actualización síncrona e inmediata de la paleta
         await Storage.set(KEYS.BG_THEME, themeId);
-        CONFIG.THEME.setFromPalette(themeId); // Update global theme config
     },
     /**
      * Establece si el audio está silenciado y lo guarda persistentemente.

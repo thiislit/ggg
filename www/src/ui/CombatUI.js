@@ -2,8 +2,9 @@ import { CONFIG } from '../data/config.js';
 import { DataManager } from '../managers/DataManager.js';
 import { AudioManager } from '../managers/AudioManager.js';
 import { RetroButton } from './components/RetroButton.js';
-import { HeartBar } from './components/HeartBar.js';
 import { LAYOUT } from '../data/Layout.js';
+import { CombatParticipants } from './components/CombatParticipants.js';
+import { CombatTimer } from './components/CombatTimer.js';
 
 export class CombatUI {
     constructor(scene, enemy) {
@@ -11,6 +12,8 @@ export class CombatUI {
         this.scene = scene;
         this.enemy = enemy; // Store enemy
         this.elements = {}; // Almacén para referencias de Phaser
+        this.participants = new CombatParticipants(scene, enemy, this.elements);
+        this.timer = new CombatTimer(scene, this.elements);
     }
 
     // --- MÁRGENES Y GRILLA ---
@@ -59,241 +62,25 @@ export class CombatUI {
 
     // --- HUD (CARTAS DE PERFIL Y CORAZONES) ---
     initHUD(p1X, p2X, baseY, heartsY) {
-        // Player 1
-        this.elements.p1Profile = this.createProfileCard(
-            p1X,
-            baseY,
-            DataManager.getName(),
-            DataManager.getPlanet(),
-            true,
-            heartsY
-        );
-        this.elements.p1Hearts = new HeartBar(this.scene, p1X, heartsY);
-
-        // CPU
-        this.elements.p2Profile = this.createProfileCard(
-            p2X,
-            baseY,
-            this.enemy.name,
-            this.enemy.planet.name,
-            false,
-            heartsY
-        );
-        this.elements.p2Hearts = new HeartBar(this.scene, p2X, heartsY);
-    }
-
-    createProfileCard(x, baseY, name, planet, isP1, _heartsY) {
-        const container = this.scene.add.container(x, baseY);
-        const planetSize = LAYOUT.HUD.PLANET_SIZE;
-
-        // --- CÁLCULO DE POSICIONES (Usando LAYOUT) ---
-        const planetCenterY = planetSize / 2 + LAYOUT.HUD.SPACING.PLANET_TOP;
-        const planetTxtY = planetCenterY + planetSize / 2 + LAYOUT.HUD.SPACING.PLANET_TEXT;
-        const speciesY = planetTxtY + LAYOUT.HUD.SPACING.SPECIES;
-        const nameY = speciesY + LAYOUT.HUD.SPACING.NAME;
-
-        const bgCircle = this.scene.add.circle(0, planetCenterY, planetSize / 2, 0x000000, 0.8);
-        const borderCircle = this.scene.add.graphics();
-        borderCircle.lineStyle(2, CONFIG.THEME.primary, 0.6);
-        borderCircle.strokeCircle(0, planetCenterY, planetSize / 2);
-
-        // Configuración de planetas
-        const planetConfigs = {
-            EARTH: { texture: 'planet_tierra', anim: 'anim_earth' },
-            MARS: { texture: 'planet_mars', anim: 'anim_mars' },
-            KEPLER: { texture: 'planet_kepler', anim: 'anim_kepler' },
-            NEBULA: { texture: 'planet_nebula', anim: 'anim_nebula' },
-        };
-
-        const pKey = planet.toUpperCase();
-        // If it's CPU, use the enemy's planet config
-        let config =
-            this.enemy && pKey === this.enemy.planet.name
-                ? this.enemy.planet
-                : planetConfigs[pKey] || planetConfigs['EARTH'];
-
-        const planetSprite = this.scene.add
-            .sprite(0, planetCenterY, config.texture)
-            .setDisplaySize(planetSize * 0.9, planetSize * 0.9)
-            .play(config.anim);
-
-        const nameTxt = this.scene.add
-            .text(0, nameY, name, {
-                fontFamily: CONFIG.FONTS.MAIN,
-                fontSize: '14px',
-                fill: CONFIG.THEME.primaryStr,
-            })
-            .setOrigin(0.5);
-
-        // Use this.enemy.species for CPU
-        const species = isP1 ? DataManager.getSpecies() : this.enemy ? this.enemy.species : '';
-        const speciesTxt = this.scene.add
-            .text(0, speciesY, `SPECIES: ${species}`, {
-                fontFamily: CONFIG.FONTS.MAIN,
-                fontSize: '8px',
-                fill: CONFIG.THEME.secondaryStr,
-            })
-            .setOrigin(0.5)
-            .setAlpha(0.7);
-
-        const planetTxt = this.scene.add
-            .text(0, planetTxtY, `PLANET: ${planet}`, {
-                fontFamily: CONFIG.FONTS.MAIN,
-                fontSize: '8px',
-                fill: CONFIG.THEME.secondaryStr,
-            })
-            .setOrigin(0.5)
-            .setAlpha(0.7);
-
-        container.add([bgCircle, planetSprite, borderCircle, planetTxt, speciesTxt, nameTxt]);
-
-        if (isP1) this.elements.p1NameTxt = nameTxt;
-        else this.elements.p2NameTxt = nameTxt;
-
-        return container;
+        this.participants.initHUD(p1X, p2X, baseY, heartsY);
     }
 
     updateHeartsUI(container, lives) {
-        if (container && container.updateLives) {
-            container.updateLives(lives);
-        }
+        this.participants.updateHearts(container, lives);
     }
 
     // --- AVATARES ---
     initAvatars(p1X, p2X, y) {
-        // P1
-        this.elements.p1Avatar = this.createSingleAvatar(p1X, y, DataManager.getAvatar(), true);
-        // CPU
-        this.elements.p2Avatar = this.createSingleAvatar(p2X, y, this.enemy.avatar, false);
-
-        [this.elements.p1Avatar, this.elements.p2Avatar].forEach((container, i) => {
-            this.scene.tweens.add({
-                targets: container,
-                y: '+=5',
-                duration: 2000,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut',
-                delay: i * 500,
-            });
-        });
-    }
-
-    createSingleAvatar(
-        x,
-        y,
-        key, // eslint-disable-next-line no-unused-vars
-        isP1
-    ) {
-        const container = this.scene.add.container(x, y);
-        const frameW = 220;
-        const frameH = 220;
-        const bg = this.scene.add.graphics();
-        bg.fillStyle(0x000000, 0.5).lineStyle(3, CONFIG.THEME.primary, 0.8);
-        bg.fillRoundedRect(-frameW / 2, -frameH / 2, frameW, frameH, 10);
-        bg.strokeRoundedRect(-frameW / 2, -frameH / 2, frameW, frameH, 10);
-
-        let avatar;
-        if (this.scene.textures.exists(key)) {
-            avatar = this.scene.add.image(0, 0, key);
-            const scale = Math.min((frameW - 20) / avatar.width, (frameH - 20) / avatar.height);
-            avatar.setScale(scale);
-            avatar.setAlpha(1).setVisible(true); // Asegurar visibilidad
-        } else {
-            console.warn(`AssetKey missing for avatar: ${key}. Using placeholder.`);
-            avatar = this.scene.add
-                .text(0, 0, '?', { fontSize: '60px', fill: '#FF0000' })
-                .setOrigin(0.5); // Placeholder
-        }
-        container.add([bg, avatar]);
-        return container;
+        this.participants.initAvatars(p1X, p2X, y);
     }
 
     // --- BARRAS DE TIEMPO ---
     initTimerBars(width, barY) {
-        const barW = width * 0.4;
-        const barH = 20;
-        const xc = width / 2;
-        const yc = barY - 40;
-        const R = 77;
-
-        const drawPath = (gfx, isLeft) => {
-            const yTop = barY - barH / 2;
-            const yBottom = barY + barH / 2;
-            const dxTop = Math.sqrt(Math.pow(R, 2) - Math.pow(yTop - yc, 2));
-            const angleTop = Math.asin((yTop - yc) / R);
-            const angleBottom = Math.asin((yBottom - yc) / R);
-            const xStart = isLeft ? xc - barW - 20 : xc + barW + 20;
-            const xArcTop = isLeft ? xc - dxTop : xc + dxTop;
-
-            gfx.beginPath().moveTo(xStart, yTop).lineTo(xArcTop, yTop);
-            if (isLeft) gfx.arc(xc, yc, R, Math.PI - angleTop, Math.PI - angleBottom, true);
-            else gfx.arc(xc, yc, R, angleTop, angleBottom, false);
-            gfx.lineTo(xStart, yBottom).closePath().fillPath().strokePath();
-        };
-
-        this.elements.barLeftBg = this.scene.add
-            .graphics()
-            .setDepth(100)
-            .fillStyle(0x000000, 0.5)
-            .lineStyle(2, CONFIG.THEME.primary, 0.5);
-        drawPath(this.elements.barLeftBg, true);
-
-        this.elements.barRightBg = this.scene.add
-            .graphics()
-            .setDepth(100)
-            .fillStyle(0x000000, 0.5)
-            .lineStyle(2, CONFIG.THEME.primary, 0.5);
-        drawPath(this.elements.barRightBg, false);
-
-        const maskLeft = this.scene.add.graphics().setVisible(false).fillStyle(0xffffff);
-        drawPath(maskLeft, true);
-        const maskRight = this.scene.add.graphics().setVisible(false).fillStyle(0xffffff);
-        drawPath(maskRight, false);
-
-        this.elements.timeBar1 = this.scene.add
-            .rectangle(0, barY, barW, barH, CONFIG.THEME.primary)
-            .setDepth(101);
-        this.elements.timeBar2 = this.scene.add
-            .rectangle(0, barY, barW, barH, CONFIG.THEME.primary)
-            .setDepth(101);
-
-        this.elements.maskLeft = maskLeft;
-        this.elements.maskRight = maskRight;
-
-        const timerStyle = {
-            fontSize: '12px',
-            fontFamily: CONFIG.FONTS.MAIN,
-            fill: CONFIG.THEME.primaryStr,
-        };
-        this.elements.timeText1 = this.scene.add
-            .text(LAYOUT.getColumnX(width, false), barY - 20, 'READY', timerStyle)
-            .setOrigin(0.5)
-            .setDepth(102);
-        this.elements.timeText2 = this.scene.add
-            .text(LAYOUT.getColumnX(width, true), barY - 20, 'READY', timerStyle)
-            .setOrigin(0.5)
-            .setDepth(102);
+        this.timer.init(width, barY);
     }
 
     updateBarPositions(isPlayerRight, width) {
-        const tb1 = this.elements.timeBar1;
-        const tb2 = this.elements.timeBar2;
-        if (isPlayerRight) {
-            tb1.setOrigin(0, 0.5)
-                .setX(width * 0.5 + 20)
-                .setMask(this.elements.maskRight.createGeometryMask());
-            tb2.setOrigin(1, 0.5)
-                .setX(width * 0.5 - 20)
-                .setMask(this.elements.maskLeft.createGeometryMask());
-        } else {
-            tb1.setOrigin(1, 0.5)
-                .setX(width * 0.5 - 20)
-                .setMask(this.elements.maskLeft.createGeometryMask());
-            tb2.setOrigin(0, 0.5)
-                .setX(width * 0.5 + 20)
-                .setMask(this.elements.maskRight.createGeometryMask());
-        }
+        this.timer.updatePositions(isPlayerRight, width);
     }
 
     // --- CONTROLES (BOTONES DE ABAJO) ---
@@ -519,25 +306,11 @@ export class CombatUI {
     }
 
     runTimer(duration, onTimeout) {
-        this.scene.tweens.add({
-            targets: [this.elements.timeBar1, this.elements.timeBar2],
-            scaleX: 0,
-            duration: duration,
-            onUpdate: (tween) => {
-                const remaining = Math.ceil((1 - tween.progress) * 5);
-                this.elements.timeText1.setText(remaining + 's');
-                this.elements.timeText2.setText(remaining + 's');
-                if (tween.progress > 0.7) {
-                    this.elements.timeBar1.setFillStyle(0xff0000);
-                    this.elements.timeBar2.setFillStyle(0xff0000);
-                }
-            },
-            onComplete: onTimeout,
-        });
+        this.timer.start(duration, onTimeout);
     }
 
     stopTimer() {
-        this.scene.tweens.killTweensOf([this.elements.timeBar1, this.elements.timeBar2]);
+        this.timer.stop();
     }
 
     animateResolutionShake(isPlayerRight, onComplete) {

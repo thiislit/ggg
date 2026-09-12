@@ -120,6 +120,9 @@ export class BackgroundScene extends Phaser.Scene {
 
             // Ensure no tint from previous states
             this.bgStatic.clearTint();
+            if (textureKey === ASSET_KEYS.IMAGES.BG_GREEN) {
+                this.bgStatic.setTint(0x88ff88);
+            }
 
             // --- GESTIÓN DE ELEMENTOS DE CAMPAÑA ---
             // 1. Galaxia Nivel 1 (show if textureKey was originally easy)

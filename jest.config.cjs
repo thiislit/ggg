@@ -9,6 +9,7 @@ module.exports = {
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json', 'node'],
   transformIgnorePatterns: ['/node_modules/'], // ignora node_modules
   testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],
+  modulePathIgnorePatterns: ['<rootDir>/android/', '<rootDir>/ios/'],
   moduleNameMapper: {
     '\\.(css|scss)$': 'identity-obj-proxy', // mocks para estilos
     '^phaser$': '<rootDir>/__mocks__/phaser.cjs', // Mock Phaser
