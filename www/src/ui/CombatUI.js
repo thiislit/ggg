@@ -11,12 +11,12 @@ export class CombatUI {
         // Add enemy parameter
         this.scene = scene;
         this.enemy = enemy; // Store enemy
-        this.elements = {}; // Almacén para referencias de Phaser
+        this.elements = {}; // Container for Phaser references
         this.participants = new CombatParticipants(scene, enemy, this.elements);
         this.timer = new CombatTimer(scene, this.elements);
     }
 
-    // --- MÁRGENES Y GRILLA ---
+    // --- MARGINS & GRID ---
     updateMainMargins(width, height) {
         if (!this.elements.mainMargin) {
             this.elements.mainMargin = this.scene.add.graphics().setDepth(1000);
@@ -44,13 +44,13 @@ export class CombatUI {
         const CENTER_X = width / 2;
         const gridColor = CONFIG.THEME.primary;
 
-        // 1. Línea Vertical Central
+        // 1. Center Vertical Line
         this.elements.gridGraphics.lineStyle(4, 0xffffff, 0.3);
         this.elements.gridGraphics.beginPath();
         this.elements.gridGraphics.lineBetween(CENTER_X, 0, CENTER_X, height);
         this.elements.gridGraphics.strokePath();
 
-        // 2. Líneas Horizontales
+        // 2. Horizontal Lines
         this.elements.gridGraphics.lineStyle(4, gridColor, 1);
         const topY = LAYOUT.getGridTop(height);
         this.elements.gridGraphics.beginPath();

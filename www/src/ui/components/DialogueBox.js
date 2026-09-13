@@ -3,7 +3,7 @@ import { AudioManager } from '../../managers/AudioManager.js';
 import { ASSET_KEYS } from '../../constants/AssetKeys.js';
 
 /**
- * Componente de Burbuja de Diálogo con efecto máquina de escribir.
+ * Dialogue Bubble component with typewriter effect.
  */
 export class DialogueBox extends Phaser.GameObjects.Container {
     constructor(scene, x, y, quote, color) {
@@ -18,12 +18,12 @@ export class DialogueBox extends Phaser.GameObjects.Container {
     }
 
     init() {
-        const bubbleWidth = 220; // Ajustado para coincidir con el ancho del frame del avatar (220px)
-        const padding = 15; // Reducido un poco para aprovechar mejor el espacio
+        const bubbleWidth = 220; // Adjusted to match avatar frame width (220px)
+        const padding = 15; // Slightly reduced to better utilize space
 
-        this.typingTimer = null; // Para poder cancelarlo
+        this.typingTimer = null; // Can be canceled
 
-        // Medir altura dinámicamente
+        // Dynamically measure height
         const measureText = this.scene.add
             .text(0, 0, this.quote, {
                 fontFamily: CONFIG.FONTS.MAIN,
@@ -36,7 +36,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         const bubbleHeight = Math.max(80, measureText.height + padding * 2);
         measureText.destroy();
 
-        // Fondo y Borde
+        // Background and Border
         const bg = this.scene.add.graphics();
         bg.fillStyle(0x000000, 0.8);
         bg.fillRoundedRect(
@@ -55,7 +55,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
             CONFIG.UI.DIALOGUE_BOX.RADIUS
         );
 
-        // Texto del contenido
+        // Content Text
         this.content = this.scene.add
             .text(0, 0, '', {
                 fontFamily: CONFIG.FONTS.MAIN,
@@ -70,7 +70,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         this.add([bg, this.content]);
         this.setScale(0);
 
-        // Animación de aparición
+        // Pop-in animation
         this.scene.tweens.add({
             targets: this,
             scale: 1,
@@ -92,7 +92,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
                 }
                 this.content.text += this.quote[i];
 
-                // Reproducir sonido de escritura usando el volumen global de SFX
+                // Play typing sound using global SFX volume
                 AudioManager.playSFX(this.scene, ASSET_KEYS.AUDIO.STORY_SFX_TYPE, {
                     detune: Math.random() * 200 - 100,
                 });
@@ -100,7 +100,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
                 i++;
                 if (i === this.quote.length) {
                     this.scene.events.emit('dialogue-typing-complete');
-                    // Auto-ocultar después de un tiempo para que no se acumulen
+                    // Auto-hide after a delay to prevent stacking
                     this.scene.time.delayedCall(3000, () => {
                         if (this.active) this.hide();
                     });
@@ -118,7 +118,7 @@ export class DialogueBox extends Phaser.GameObjects.Container {
         if (this.content) {
             this.content.setText(this.quote);
         }
-        // Emitir el evento para que la escena sepa que puede continuar
+        // Emit event so scene knows it can proceed
         this.scene.events.emit('dialogue-typing-complete');
     }
 

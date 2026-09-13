@@ -2,8 +2,8 @@ import { CONFIG } from '../../data/config.js';
 import { AudioManager } from '../../managers/AudioManager.js';
 
 /**
- * Componente Selector con flechas laterales.
- * Encapsula la lógica de navegación y el feedback visual.
+ * Selector Component with lateral arrows.
+ * Encapsulates navigation logic and visual feedback.
  */
 export class ArrowSelector extends Phaser.GameObjects.Container {
     constructor(scene, x, y, options = {}, callback) {
@@ -12,14 +12,14 @@ export class ArrowSelector extends Phaser.GameObjects.Container {
         this.callback = callback;
 
         const {
-            distance = 100, // Distancia entre flechas
+            distance = 100, // Distance between arrows
             type = 'none', // 'circular', 'square', 'none'
-            size = 100, // Tamaño del fondo
+            size = 100, // Background size
             color = CONFIG.THEME.PRIMARY,
             arrowSize = '38px',
         } = options;
 
-        // 1. Dibujar Fondo (Si se requiere)
+        // 1. Draw Background (If required)
         if (type !== 'none') {
             this.bg = this.scene.add.graphics();
             this.bg.lineStyle(4, color, 0.8);
@@ -35,13 +35,13 @@ export class ArrowSelector extends Phaser.GameObjects.Container {
             this.add(this.bg);
         }
 
-        // 2. Crear Flechas
+        // 2. Create Arrows
         this.leftArrow = this.createArrow(-distance, '<', arrowSize);
         this.rightArrow = this.createArrow(distance, '>', arrowSize);
 
         this.add([this.leftArrow, this.rightArrow]);
 
-        // Añadir este contenedor a la escena
+        // Add container to scene
         this.scene.add.existing(this);
     }
 
@@ -55,7 +55,7 @@ export class ArrowSelector extends Phaser.GameObjects.Container {
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
 
-        // Animación y Sonido al pulsar
+        // Click Animation & Sound
         arrow.on('pointerdown', () => {
             AudioManager.playSFX(this.scene, 'sfx_button');
             this.scene.tweens.add({
