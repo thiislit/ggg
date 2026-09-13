@@ -13,38 +13,32 @@ import { LAYOUT } from '../data/Layout.js';
 import { ASSET_KEYS } from '../constants/AssetKeys.js';
 import { TutorialManager } from '../managers/TutorialManager.js'; // Import TutorialManager
 import { ChoiceControls } from '../ui/components/ChoiceControls.js';
-
-// --- MÁQUINA DE ESTADOS FINITA ---
-const GAME_STATE = {
-    IDLE: 'IDLE', // Esperando input (Menú o Siguiente Ronda)
-    COUNTDOWN: 'COUNTDOWN', // Ronda activa, tiempo corriendo
-    LOCKED: 'LOCKED', // Jugador eligió (o tiempo fuera), procesando
-    RESULT: 'RESULT', // Mostrando resultado (Win/Lose)
-    FATALITY: 'FATALITY', // Secuencia final
-    GAME_OVER: 'GAME_OVER', // Pantalla de fin
-};
+import { GAME_STATE } from '../constants/game.js';
+import { GameStateManager } from '../managers/GameStateManager.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
-        // Inicialización de datos básicos
+        // Basic data initialization
         this.p1Health = 3;
         this.p2Health = 3;
         this.playerStats = [0, 0, 0];
         this.playerName = 'PLAYER 1';
         this.dialogueDecks = { P1: {}, CPU: {} };
 
-        // Estado Inicial
+        // State Manager
+        this.stateManager = new GameStateManager(this);
         this.currentState = GAME_STATE.IDLE;
-        this.isPlayerRight = false; // Se carga en create
+        this.isPlayerRight = false; // Loaded in create
 
-        this.currentOpponent = null; // Almacena el oponente actual para diálogos, etc.
-        this.shakeEvent = null; // Evento de temporizador para el shake continuo
+        this.currentOpponent = null; // Store current opponent for dialogues
+        this.shakeEvent = null; // Timer event for continuous camera shake
     }
 
-    // --- GESTIÓN DE ESTADO ---
+    // --- STATE MANAGEMENT ---
     setState(newState) {
         this.currentState = newState;
+        this.stateManager.setState(newState);
     }
 
     // --- MANEJO DE VIBRACIÓN CONTINUA ---
