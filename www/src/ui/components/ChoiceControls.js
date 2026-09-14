@@ -90,8 +90,9 @@ export class ChoiceControls {
     resetColors() {
         [this.playerButtons, this.cpuButtons].forEach((buttons) => {
             buttons.forEach((button) => {
-                const background = button?.list[0];
-                const label = button?.list[3];
+                if (!button) return;
+                const background = button.list ? button.list[0] : null;
+                const label = button.list ? button.list[3] : null;
                 if (background) background.setFillStyle(0x000000, 0.1);
                 if (label) label.setFill(CONFIG.THEME.primaryStr);
             });
