@@ -1,7 +1,7 @@
 import { CONFIG } from '../data/config.js';
-import { RetroButton } from './components/RetroButton.js';
 import { HeartBar } from './components/HeartBar.js';
 import { DataManager } from '../managers/DataManager.js';
+import { AudioManager } from '../managers/AudioManager.js';
 
 export class OnlineCombatUI {
     constructor(scene, p2Name = 'OPPONENT') {
@@ -11,6 +11,24 @@ export class OnlineCombatUI {
     }
 
     create(width, height) {
+        // --- 0. BACK TO MENU BUTTON ---
+        const backY = height * 0.035;
+        this.elements.backBtn = this.scene.add
+            .text(width * 0.08, backY, '◀ BACK', {
+                fontFamily: CONFIG.FONTS.MAIN,
+                fontSize: CONFIG.FONTS.SIZES.MICRO,
+                fill: CONFIG.THEME.primaryStr,
+                backgroundColor: '#000000',
+                padding: { x: 8, y: 4 },
+            })
+            .setOrigin(0, 0.5)
+            .setInteractive({ useHandCursor: true });
+
+        this.elements.backBtn.on('pointerdown', () => {
+            AudioManager.playSFX(this.scene, 'sfx_button');
+            this.scene.scene.start('MainMenuScene');
+        });
+
         // --- 1. TOP HUD (P1 & P2 LIVES) ---
         const topY = height * 0.08;
         const halfWidth = width / 2;
@@ -126,28 +144,53 @@ export class OnlineCombatUI {
             })
             .setOrigin(0.5);
 
-        // --- 5. BOTTOM CONTROLS (ROCK, PAPER, SCISSORS) ---
+        // --- 5. BOTTOM CONTROLS (CIRCULAR STYLE LIKE QUICK PLAY) ---
         const controlsY = height * 0.78;
-        const btnWidth = width * 0.27;
         const choices = [
             { name: 'ROCK', emoji: '✊', index: 0 },
             { name: 'PAPER', emoji: '✋', index: 1 },
             { name: 'SCISSORS', emoji: '✌️', index: 2 },
         ];
+        const stepX = width / 3;
 
         this.elements.buttons = choices.map((c, i) => {
-            const posX = width * 0.18 + i * (btnWidth + width * 0.05);
-            const btn = new RetroButton(
-                this.scene,
-                posX,
-                controlsY,
-                `${c.emoji}\n${c.name}`,
-                CONFIG.THEME.primary,
-                () => {
-                    if (this.onChoiceSelected) this.onChoiceSelected(c.index);
-                }
-            );
-            return btn;
+            const posX = stepX / 2 + i * stepX;
+            const container = this.scene.add.container(posX, controlsY).setDepth(500);
+
+            const background = this.scene.add
+                .circle(0, 0, 42, 0x000000, 0.6)
+                .setStrokeStyle(CONFIG.UI.BORDER_WIDTH, CONFIG.THEME.primary);
+
+            const emojiText = this.scene.add
+                .text(0, 0, c.emoji, {
+                    fontSize: CONFIG.FONTS.SIZES.EMOJI,
+                    padding: { x: 10, y: 10 },
+                })
+                .setOrigin(0.5);
+
+            const label = this.scene.add
+                .text(0, 55, c.name, {
+                    fontFamily: CONFIG.FONTS.MAIN,
+                    fontSize: CONFIG.FONTS.SIZES.SMALL,
+                    fill: CONFIG.THEME.primaryStr,
+                })
+                .setOrigin(0.5);
+
+            container.add([background, emojiText, label]);
+
+            background.setInteractive({ useHandCursor: true });
+            background.on('pointerdown', () => {
+                AudioManager.playSFX(this.scene, 'sfx_button');
+                this.scene.tweens.add({
+                    targets: container,
+                    scale: 1.2,
+                    duration: 100,
+                    yoyo: true,
+                });
+                if (this.onChoiceSelected) this.onChoiceSelected(c.index);
+            });
+
+            return container;
         });
 
         // --- 6. BOTTOM BANNER / ADS SPACE ---
