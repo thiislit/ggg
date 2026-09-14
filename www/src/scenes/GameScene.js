@@ -63,7 +63,8 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.shakeEffect.reset(); // Asegurarse de detener cualquier sacudida en progreso
     }
 
-    async create() {
+    async create(data = {}) {
+        this.isOnline = !!data.isOnline;
         let enemy = OPPONENTS.ZORG; // Initialize with a default valid enemy
 
         // Cargar Datos
@@ -202,7 +203,13 @@ export class GameScene extends Phaser.Scene {
         this.choiceControls = new ChoiceControls(this, (choiceIndex) =>
             this.handleInput(choiceIndex)
         );
-        const controls = this.choiceControls.create(width, height, FOOT_Y, this.isPlayerRight);
+        const controls = this.choiceControls.create(
+            width,
+            height,
+            FOOT_Y,
+            this.isPlayerRight,
+            this.isOnline
+        );
         this.p1Buttons = controls.playerButtons;
         this.p2Buttons = controls.cpuButtons;
         this.ui.initControls(width, height, 20);

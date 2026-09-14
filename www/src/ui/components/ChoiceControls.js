@@ -10,7 +10,7 @@ export class ChoiceControls {
         this.cpuButtons = [];
     }
 
-    create(width, height, footerTop, isPlayerRight) {
+    create(width, height, footerTop, isPlayerRight, isOnline = false) {
         const choices = ['ROCK', 'PAPER', 'SCISSORS'];
         const emojis = ['✊', '✋', '✌️'];
         const startY = footerTop || LAYOUT.getGridBottom(height);
@@ -26,7 +26,16 @@ export class ChoiceControls {
                 true,
                 index
             );
-            this.cpuButtons[index] = this.createButton(cpuX, y, name, emojis[index], false, index);
+            if (!isOnline) {
+                this.cpuButtons[index] = this.createButton(
+                    cpuX,
+                    y,
+                    name,
+                    emojis[index],
+                    false,
+                    index
+                );
+            }
         });
         return { playerButtons: this.playerButtons, cpuButtons: this.cpuButtons };
     }
