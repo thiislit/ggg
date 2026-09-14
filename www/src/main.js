@@ -7,7 +7,6 @@ import { BackgroundScene } from './scenes/BackgroundScene.js';
 import { ProfileScene } from './scenes/ProfileScene.js';
 import { StoryScene } from './scenes/StoryScene.js';
 import { EpilogueScene } from './scenes/EpilogueScene.js'; // Importar la nueva escena
-import { OnlineGameScene } from './scenes/OnlineGameScene.js';
 import { MobileManager } from './managers/MobileManager.js'; // Import MobileManager
 import { GAME_WIDTH, GAME_HEIGHT } from './constants/game.js';
 
@@ -29,7 +28,6 @@ const config = {
         ProfileScene,
         MainMenuScene,
         GameScene,
-        OnlineGameScene,
         GameOverScene,
         SettingsScene,
         EpilogueScene,
