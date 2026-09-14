@@ -35,8 +35,8 @@ export class MainMenuScene extends Phaser.Scene {
         // --- BOTONES ---
         this.menuButtons = [];
 
-        const startY = height * 0.35;
-        const gap = height * 0.11;
+        const startY = height * 0.32;
+        const gap = height * 0.095;
 
         // 1. STORY MODE (Gold)
         const storyBtn = new RetroButton(this, width / 2, startY, 'STORY MODE', 0xffd700, () => {
@@ -45,11 +45,25 @@ export class MainMenuScene extends Phaser.Scene {
         });
         this.menuButtons.push({ instance: storyBtn, type: 'GOLD' });
 
-        // 2. QUICK PLAY
-        const quickBtn = new RetroButton(
+        // 2. ONLINE VERSUS
+        const onlineBtn = new RetroButton(
             this,
             width / 2,
             startY + gap,
+            'ONLINE VERSUS',
+            0xff00ff,
+            () => {
+                CampaignManager.stopCampaign();
+                this.scene.start('OnlineGameScene', { p2Name: 'RIVAL ONLINE' });
+            }
+        );
+        this.menuButtons.push({ instance: onlineBtn, type: 'PRIMARY' });
+
+        // 3. QUICK PLAY
+        const quickBtn = new RetroButton(
+            this,
+            width / 2,
+            startY + gap * 2,
             'QUICK PLAY',
             CONFIG.THEME.PRIMARY,
             () => {
@@ -59,11 +73,11 @@ export class MainMenuScene extends Phaser.Scene {
         );
         this.menuButtons.push({ instance: quickBtn, type: 'PRIMARY' });
 
-        // 3. EDITAR PERFIL
+        // 4. EDITAR PERFIL
         const profileBtn = new RetroButton(
             this,
             width / 2,
-            startY + gap * 2,
+            startY + gap * 3,
             'EDIT PROFILE',
             CONFIG.THEME.ACCENT || 0x00ff00,
             () => {
@@ -72,11 +86,11 @@ export class MainMenuScene extends Phaser.Scene {
         );
         this.menuButtons.push({ instance: profileBtn, type: 'SECONDARY' });
 
-        // 4. OPCIONES
+        // 5. OPCIONES
         const optBtn = new RetroButton(
             this,
             width / 2,
-            startY + gap * 3,
+            startY + gap * 4,
             'OPTIONS',
             CONFIG.THEME.SECONDARY,
             () => {
