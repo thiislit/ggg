@@ -8,6 +8,7 @@ export class ChoiceControls {
         this.onPlayerChoice = onPlayerChoice;
         this.playerButtons = [];
         this.cpuButtons = [];
+        this.onlineRivalDisplay = null;
     }
 
     create(width, height, footerTop, isPlayerRight, isOnline = false) {
@@ -16,6 +17,8 @@ export class ChoiceControls {
         const startY = footerTop || LAYOUT.getGridBottom(height);
         const playerX = LAYOUT.getColumnX(width, isPlayerRight);
         const cpuX = LAYOUT.getColumnX(width, !isPlayerRight);
+        this.onlineRivalDisplay = null;
+
         choices.forEach((name, index) => {
             const y = startY + LAYOUT.BUTTONS.START_OFFSET + index * LAYOUT.BUTTONS.SPACING;
             this.playerButtons[index] = this.createButton(
@@ -37,7 +40,80 @@ export class ChoiceControls {
                 );
             }
         });
-        return { playerButtons: this.playerButtons, cpuButtons: this.cpuButtons };
+
+        if (isOnline) {
+            const innerBottom = height - 10;
+            const centerX = this.getOnlineRivalCenterX(width, isPlayerRight);
+            const centerY = (startY + innerBottom) / 2;
+            this.onlineRivalDisplay = this.createOnlineRivalDisplay(centerX, centerY);
+        }
+
+        return {
+            playerButtons: this.playerButtons,
+            cpuButtons: this.cpuButtons,
+            onlineRivalDisplay: this.onlineRivalDisplay,
+        };
+    }
+
+    getOnlineRivalCenterX(width, isPlayerRight) {
+        const halfWidth = width / 2;
+        const borderInset = 10;
+        return isPlayerRight ? (borderInset + halfWidth) / 2 : (halfWidth + width - borderInset) / 2;
+    }
+
+    createOnlineRivalDisplay(x, y) {
+        // Doble de tamaño respecto al botón PLAY (radio 75 -> 150, diámetro 300px)
+        const radius = 150;
+        const container = this.scene.add.container(x, y).setDepth(500);
+        const background = this.scene.add
+            .circle(0, 0, radius, 0x000000, 0.45)
+            .setStrokeStyle(4, CONFIG.THEME.secondary);
+        const icon = this.scene.add
+            .text(0, 0, '?', {
+                fontFamily: CONFIG.FONTS.MAIN,
+                fontSize: CONFIG.FONTS.SIZES.EMOJI_BIG,
+                fill: CONFIG.THEME.secondaryStr,
+                padding: { x: 20, y: 20 },
+            })
+            .setOrigin(0.5);
+        container.add([background, icon]);
+        return container;
+    }
+
+    showOnlineRivalChoice(choiceIndex) {
+        if (!this.onlineRivalDisplay) return;
+        const emojis = ['✊', '✋', '✌️'];
+        const [background, icon] = this.onlineRivalDisplay.list || [];
+
+        const hasValidChoice = choiceIndex >= 0 && choiceIndex < emojis.length;
+        if (background) {
+            background.setFillStyle(CONFIG.THEME.secondary, 0.35);
+            background.setStrokeStyle(4, CONFIG.THEME.primary);
+        }
+        if (icon) {
+            icon.setText(hasValidChoice ? emojis[choiceIndex] : '❌');
+        }
+
+        this.scene.tweens.add({
+            targets: this.onlineRivalDisplay,
+            scale: 1.12,
+            duration: 150,
+            yoyo: true,
+            ease: 'Back.easeOut',
+        });
+    }
+
+    resetOnlineRivalDisplay() {
+        if (!this.onlineRivalDisplay) return;
+        const [background, icon] = this.onlineRivalDisplay.list || [];
+        if (background) {
+            background.setFillStyle(0x000000, 0.45);
+            background.setStrokeStyle(4, CONFIG.THEME.secondary);
+        }
+        if (icon) {
+            icon.setText('?');
+            icon.setFill(CONFIG.THEME.secondaryStr);
+        }
     }
 
     createButton(x, y, name, emoji, isPlayer, index) {
@@ -85,6 +161,14 @@ export class ChoiceControls {
                     ease: 'Back.easeOut',
                 });
         });
+        if (this.onlineRivalDisplay) {
+            this.scene.tweens.add({
+                targets: this.onlineRivalDisplay,
+                x: this.getOnlineRivalCenterX(width, isPlayerRight),
+                duration: 400,
+                ease: 'Back.easeOut',
+            });
+        }
     }
 
     resetColors() {
@@ -97,6 +181,7 @@ export class ChoiceControls {
                 if (label) label.setFill(CONFIG.THEME.primaryStr);
             });
         });
+        this.resetOnlineRivalDisplay();
     }
 
     applyTheme() {
@@ -106,5 +191,10 @@ export class ChoiceControls {
         this.cpuButtons.forEach((button) =>
             button?.list[0]?.setStrokeStyle(CONFIG.UI.BORDER_WIDTH, CONFIG.THEME.secondary)
         );
+        if (this.onlineRivalDisplay) {
+            const [background, icon] = this.onlineRivalDisplay.list || [];
+            background?.setStrokeStyle(4, CONFIG.THEME.secondary);
+            icon?.setFill?.(CONFIG.THEME.secondaryStr);
+        }
     }
 }

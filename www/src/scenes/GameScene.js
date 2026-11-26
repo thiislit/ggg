@@ -371,6 +371,9 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Actualizar UI
+        if (this.isOnline && this.choiceControls) {
+            this.choiceControls.showOnlineRivalChoice(p2);
+        }
         this.ui.showRoundResult(
             p1,
             p2,
