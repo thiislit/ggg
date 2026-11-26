@@ -1,7 +1,14 @@
 import { CONFIG } from '../../data/config.js';
 import { LAYOUT } from '../../data/Layout.js';
+import { createEmojiDisplay } from './EmojiReactions.js';
 
-/** Botones de piedra, papel y tijera que pertenecen al jugador y a la CPU. */
+/**
+ * Botones de piedra, papel y tijera que pertenecen al jugador y a la CPU.
+ *
+ * En Online Versus los botones del jugador forman una fila horizontal bajo su
+ * avatar y la parte inferior del rival muestra un contenedor con su jugada
+ * (y sus emojis, que pinta `EmojiReactions`).
+ */
 export class ChoiceControls {
     constructor(scene, onPlayerChoice) {
         this.scene = scene;
@@ -9,6 +16,7 @@ export class ChoiceControls {
         this.playerButtons = [];
         this.cpuButtons = [];
         this.onlineRivalDisplay = null;
+        this.isOnline = false;
     }
 
     create(width, height, footerTop, isPlayerRight, isOnline = false) {
@@ -17,19 +25,42 @@ export class ChoiceControls {
         const startY = footerTop || LAYOUT.getGridBottom(height);
         const playerX = LAYOUT.getColumnX(width, isPlayerRight);
         const cpuX = LAYOUT.getColumnX(width, !isPlayerRight);
+        this.isOnline = isOnline;
         this.onlineRivalDisplay = null;
 
-        choices.forEach((name, index) => {
-            const y = startY + LAYOUT.BUTTONS.START_OFFSET + index * LAYOUT.BUTTONS.SPACING;
-            this.playerButtons[index] = this.createButton(
-                playerX,
-                y,
-                name,
-                emojis[index],
-                true,
-                index
+        if (isOnline) {
+            const rowY = LAYOUT.getOnlineChoiceRowY(height);
+            choices.forEach((name, index) => {
+                this.playerButtons[index] = this.createButton(
+                    this.getOnlineChoiceX(playerX, index),
+                    rowY,
+                    name,
+                    emojis[index],
+                    true,
+                    index
+                );
+            });
+            this.onlineRivalDisplay = createEmojiDisplay(
+                this.scene,
+                LAYOUT.getOnlinePanelX(width, !isPlayerRight),
+                LAYOUT.getOnlineDisplayY(startY),
+                {
+                    placeholder: '?',
+                    strokeColor: CONFIG.THEME.secondary,
+                    textColor: CONFIG.THEME.secondaryStr,
+                }
             );
-            if (!isOnline) {
+        } else {
+            choices.forEach((name, index) => {
+                const y = startY + LAYOUT.BUTTONS.START_OFFSET + index * LAYOUT.BUTTONS.SPACING;
+                this.playerButtons[index] = this.createButton(
+                    playerX,
+                    y,
+                    name,
+                    emojis[index],
+                    true,
+                    index
+                );
                 this.cpuButtons[index] = this.createButton(
                     cpuX,
                     y,
@@ -38,14 +69,7 @@ export class ChoiceControls {
                     false,
                     index
                 );
-            }
-        });
-
-        if (isOnline) {
-            const innerBottom = height - 10;
-            const centerX = this.getOnlineRivalCenterX(width, isPlayerRight);
-            const centerY = (startY + innerBottom) / 2;
-            this.onlineRivalDisplay = this.createOnlineRivalDisplay(centerX, centerY);
+            });
         }
 
         return {
@@ -55,29 +79,9 @@ export class ChoiceControls {
         };
     }
 
-    getOnlineRivalCenterX(width, isPlayerRight) {
-        const halfWidth = width / 2;
-        const borderInset = 10;
-        return isPlayerRight ? (borderInset + halfWidth) / 2 : (halfWidth + width - borderInset) / 2;
-    }
-
-    createOnlineRivalDisplay(x, y) {
-        // Doble de tamaño respecto al botón PLAY (radio 75 -> 150, diámetro 300px)
-        const radius = 150;
-        const container = this.scene.add.container(x, y).setDepth(500);
-        const background = this.scene.add
-            .circle(0, 0, radius, 0x000000, 0.45)
-            .setStrokeStyle(4, CONFIG.THEME.secondary);
-        const icon = this.scene.add
-            .text(0, 0, '?', {
-                fontFamily: CONFIG.FONTS.MAIN,
-                fontSize: CONFIG.FONTS.SIZES.EMOJI_BIG,
-                fill: CONFIG.THEME.secondaryStr,
-                padding: { x: 20, y: 20 },
-            })
-            .setOrigin(0.5);
-        container.add([background, icon]);
-        return container;
+    /** X de cada botón en la fila horizontal online (piedra a la izquierda, tijera a la derecha). */
+    getOnlineChoiceX(columnX, index) {
+        return columnX + (index - 1) * LAYOUT.ONLINE.CHOICE_SPACING;
     }
 
     showOnlineRivalChoice(choiceIndex) {
@@ -143,11 +147,11 @@ export class ChoiceControls {
     move(isPlayerRight, width) {
         const playerX = LAYOUT.getColumnX(width, isPlayerRight);
         const cpuX = LAYOUT.getColumnX(width, !isPlayerRight);
-        this.playerButtons.forEach((button) => {
+        this.playerButtons.forEach((button, index) => {
             if (button)
                 this.scene.tweens.add({
                     targets: button,
-                    x: playerX,
+                    x: this.isOnline ? this.getOnlineChoiceX(playerX, index) : playerX,
                     duration: 400,
                     ease: 'Back.easeOut',
                 });
@@ -164,7 +168,7 @@ export class ChoiceControls {
         if (this.onlineRivalDisplay) {
             this.scene.tweens.add({
                 targets: this.onlineRivalDisplay,
-                x: this.getOnlineRivalCenterX(width, isPlayerRight),
+                x: LAYOUT.getOnlinePanelX(width, !isPlayerRight),
                 duration: 400,
                 ease: 'Back.easeOut',
             });

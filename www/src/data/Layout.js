@@ -32,6 +32,22 @@ export const LAYOUT = {
         TIMER_BAR_OFFSET: -25,
     },
 
+    // Online Versus: jugadas arriba (bajo el avatar) y comunicación abajo
+    ONLINE: {
+        CHOICE_ROW_OFFSET_FROM_AVATAR: 160, // El marco del avatar mide 220px: su borde inferior queda a +110
+        CHOICE_SPACING: 110, // Separación horizontal entre piedra, papel y tijera
+        DISPLAY_RADIUS: 95, // Contenedores de emojis (tuyo y del rival)
+        DISPLAY_TOP_GAP: 15, // Distancia desde la línea inferior de la grilla
+        BORDER_INSET: 10, // Grosor del marco exterior de la pantalla
+    },
+
+    // Barra para elegir emojis, debajo de tu contenedor (solo Online Versus)
+    EMOJI_BAR: {
+        GAP_FROM_DISPLAY: 14,
+        SLOT_RADIUS: 24,
+        SPACING: 56,
+    },
+
     // Controles Inferiores
     CONTROLS: {
         BTN_Y_OFFSET: 55,
@@ -63,6 +79,26 @@ export const LAYOUT = {
     },
     getAvatarY(height) {
         return height * this.COMBAT.AVATAR_Y_FACTOR + this.COMBAT.AVATAR_OFFSET;
+    },
+    getOnlineChoiceRowY(height) {
+        return this.getAvatarY(height) + this.ONLINE.CHOICE_ROW_OFFSET_FROM_AVATAR;
+    },
+    /** Centro X de la mitad izquierda/derecha, descontando el marco exterior. */
+    getOnlinePanelX(width, isRight) {
+        const half = width / 2;
+        const inset = this.ONLINE.BORDER_INSET;
+        return isRight ? (half + width - inset) / 2 : (inset + half) / 2;
+    },
+    getOnlineDisplayY(footerTop) {
+        return footerTop + this.ONLINE.DISPLAY_TOP_GAP + this.ONLINE.DISPLAY_RADIUS;
+    },
+    getEmojiBarY(footerTop) {
+        return (
+            this.getOnlineDisplayY(footerTop) +
+            this.ONLINE.DISPLAY_RADIUS +
+            this.EMOJI_BAR.GAP_FROM_DISPLAY +
+            this.EMOJI_BAR.SLOT_RADIUS
+        );
     },
     getEmojiY(height) {
         return height * this.COMBAT.EMOJI_Y_FACTOR + this.COMBAT.EMOJI_OFFSET;

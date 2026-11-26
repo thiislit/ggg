@@ -15,6 +15,8 @@ import { TutorialManager } from '../managers/TutorialManager.js'; // Import Tuto
 import { ChoiceControls } from '../ui/components/ChoiceControls.js';
 import { GAME_STATE } from '../constants/game.js';
 import { GameStateManager } from '../managers/GameStateManager.js';
+import { EmojiReactions, REACTION_EMOJIS } from '../ui/components/EmojiReactions.js';
+import { createOnlineChannel } from '../managers/OnlineChannel.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -213,6 +215,15 @@ export class GameScene extends Phaser.Scene {
         this.p1Buttons = controls.playerButtons;
         this.p2Buttons = controls.cpuButtons;
         this.ui.initControls(width, height, 20);
+
+        // 5. Panel de emojis entre jugadores en la parte inferior (solo Online Versus)
+        if (this.isOnline) {
+            this.setupEmojiReactions(
+                LAYOUT.getOnlinePanelX(width, this.isPlayerRight),
+                LAYOUT.getOnlineDisplayY(FOOT_Y),
+                LAYOUT.getEmojiBarY(FOOT_Y)
+            );
+        }
 
         // Posicionar el indicador de la IA inicialmente
         let indicatorBtnRef; // Referencia al botón (mute o config)
@@ -511,6 +522,34 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
+    setupEmojiReactions(x, displayY, barY) {
+        this.teardownEmojiReactions();
+
+        this.onlineChannel = createOnlineChannel({ emojis: REACTION_EMOJIS });
+        this.emojiReactions = new EmojiReactions(this, {
+            emojis: REACTION_EMOJIS,
+            onSend: (emoji) => {
+                AudioManager.playSFX(this, ASSET_KEYS.AUDIO.SFX_BUTTON);
+                this.onlineChannel?.send('emoji', { emoji });
+            },
+        });
+        this.emojiReactions.create(x, displayY, barY);
+
+        // Los emojis del rival aparecen en su contenedor (el mismo que revela su jugada)
+        this.onlineChannel.on('emoji', ({ emoji }) => {
+            this.emojiReactions?.showInDisplay(this.choiceControls?.onlineRivalDisplay, emoji);
+        });
+
+        this.events.once('shutdown', () => this.teardownEmojiReactions());
+    }
+
+    teardownEmojiReactions() {
+        this.onlineChannel?.close();
+        this.onlineChannel = null;
+        this.emojiReactions?.destroy();
+        this.emojiReactions = null;
+    }
+
     switchSides() {
         // Solo permitir cambio de lado si no estamos jugando activamente
         if (this.currentState !== GAME_STATE.IDLE) return;
@@ -577,6 +616,7 @@ export class GameScene extends Phaser.Scene {
 
         // Mover botones y textos
         this.choiceControls.move(this.isPlayerRight, width);
+        this.emojiReactions?.move(LAYOUT.getOnlinePanelX(width, this.isPlayerRight));
         this.tweens.add({
             targets: this.timeText1,
             x: LAYOUT.getColumnX(width, true),
@@ -622,6 +662,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     showDialogue(isP1, type) {
+        // En Online Versus el rival es una persona: se comunica con emojis, no con frases de CPU
+        if (this.isOnline && !isP1) return;
+
         const speakerKey = isP1 ? 'P1' : 'CPU';
         const text = this.getDialoguePhrase(speakerKey, type);
 
@@ -653,6 +696,7 @@ export class GameScene extends Phaser.Scene {
         this.ui.applyTheme();
 
         this.choiceControls.applyTheme();
+        this.emojiReactions?.applyTheme();
 
         this.updateMuteIcon();
     }
