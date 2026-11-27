@@ -54,7 +54,7 @@ export class MainMenuScene extends Phaser.Scene {
             0xff00ff,
             () => {
                 CampaignManager.stopCampaign();
-                this.scene.start('GameScene', { isOnline: true });
+                this.scene.start('OnlineLobbyScene');
             }
         );
         this.menuButtons.push({ instance: onlineBtn, type: 'PRIMARY' });

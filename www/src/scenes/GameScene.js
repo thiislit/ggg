@@ -67,6 +67,9 @@ export class GameScene extends Phaser.Scene {
 
     async create(data = {}) {
         this.isOnline = !!data.isOnline;
+        // Canal ya conectado desde OnlineLobbyScene (null = práctica con rival simulado)
+        this.providedChannel = data.channel || null;
+        this.rivalProfile = data.rival || null;
         let enemy = OPPONENTS.ZORG; // Initialize with a default valid enemy
 
         // Cargar Datos
@@ -525,7 +528,9 @@ export class GameScene extends Phaser.Scene {
     setupEmojiReactions(x, displayY, barY) {
         this.teardownEmojiReactions();
 
-        this.onlineChannel = createOnlineChannel({ emojis: REACTION_EMOJIS });
+        this.onlineChannel =
+            this.providedChannel || createOnlineChannel({ emojis: REACTION_EMOJIS });
+        this.providedChannel = null; // La escena pasa a ser dueña del canal (lo cierra al salir)
         this.emojiReactions = new EmojiReactions(this, {
             emojis: REACTION_EMOJIS,
             onSend: (emoji) => {
@@ -538,6 +543,19 @@ export class GameScene extends Phaser.Scene {
         // Los emojis del rival aparecen en su contenedor (el mismo que revela su jugada)
         this.onlineChannel.on('emoji', ({ emoji }) => {
             this.emojiReactions?.showInDisplay(this.choiceControls?.onlineRivalDisplay, emoji);
+        });
+
+        this.onlineChannel.on('rival-left', () => {
+            const { width, height } = this.scale;
+            const notice = new DialogueBox(
+                this,
+                width / 2,
+                height / 2,
+                'YOUR RIVAL LEFT THE ROOM',
+                CONFIG.COLORS.CPU_RED
+            );
+            if (!this.activeBubbles) this.activeBubbles = [];
+            this.activeBubbles.push(notice);
         });
 
         this.events.once('shutdown', () => this.teardownEmojiReactions());
