@@ -10,7 +10,8 @@ class FakeRealtimeChannel {
         this.name = name;
         this.options = options;
         this.listeners = [];
-        this.state = {};
+        this.presence = {};
+        this.state = 'closed'; // estado del canal, como en Supabase
         this.sent = [];
         this.untracked = false;
     }
@@ -23,10 +24,10 @@ class FakeRealtimeChannel {
         return this;
     }
     presenceState() {
-        return this.state;
+        return this.presence;
     }
     async track(meta) {
-        this.state[meta.id] = [meta];
+        this.presence[meta.id] = [meta];
     }
     untrack() {
         this.untracked = true;
@@ -36,10 +37,11 @@ class FakeRealtimeChannel {
     }
     // --- helpers de test ---
     setStatus(status) {
+        this.state = status === 'SUBSCRIBED' ? 'joined' : 'errored';
         this.statusCallback(status);
     }
     setMembers(members) {
-        this.state = Object.fromEntries(members.map((m) => [m.id, [m]]));
+        this.presence = Object.fromEntries(members.map((m) => [m.id, [m]]));
     }
     emit(type, event, payload) {
         this.listeners
@@ -103,12 +105,12 @@ describe('SupabaseOnlineChannel', () => {
         await online.enter();
 
         const rival = { id: 'rival', name: 'ZED', joinedAt: 5000 };
-        getChannel().state.rival = [rival];
+        getChannel().presence.rival = [rival];
         getChannel().sync();
         expect(joined).toHaveBeenCalledWith(rival);
         expect(online.rival).toEqual(rival);
 
-        delete getChannel().state.rival;
+        delete getChannel().presence.rival;
         getChannel().sync();
         expect(left).toHaveBeenCalledWith(rival);
         expect(online.rival).toBeNull();
@@ -168,6 +170,87 @@ describe('SupabaseOnlineChannel', () => {
         expect(channel.untracked).toBe(true);
         expect(client.removeChannel).toHaveBeenCalledWith(channel);
         expect(onEmoji).not.toHaveBeenCalled();
+    });
+
+    it('reports connection loss and re-announces presence after reconnecting', async () => {
+        const { online, getChannel } = setup();
+        const connecting = online.connect();
+        const channel = getChannel();
+        channel.setStatus('SUBSCRIBED');
+        channel.sync();
+        await connecting;
+        await online.enter();
+        const firstMeta = channel.presence.me[0];
+        const onConnection = jest.fn();
+        online.on('connection', onConnection);
+
+        // Corte: el servidor deja de vernos
+        channel.setStatus('CHANNEL_ERROR');
+        delete channel.presence.me;
+        expect(onConnection).toHaveBeenLastCalledWith({ connected: false });
+
+        // Supabase reconecta solo y vuelve a llamar con SUBSCRIBED
+        channel.setStatus('SUBSCRIBED');
+        await Promise.resolve();
+        expect(onConnection).toHaveBeenLastCalledWith({ connected: true });
+        expect(channel.presence.me[0]).toEqual(firstMeta); // mismo joinedAt: conserva su puesto
+    });
+
+    it('emits rival-joined again when the same rival comes back after a drop', async () => {
+        const { online, getChannel } = setup();
+        const connecting = online.connect();
+        getChannel().setStatus('SUBSCRIBED');
+        getChannel().sync();
+        await connecting;
+        await online.enter();
+        const joined = jest.fn();
+        const left = jest.fn();
+        online.on('rival-joined', joined);
+        online.on('rival-left', left);
+        const rival = { id: 'rival', name: 'ZED', joinedAt: 5000 };
+
+        getChannel().presence.rival = [rival];
+        getChannel().sync();
+        delete getChannel().presence.rival;
+        getChannel().sync();
+        getChannel().presence.rival = [rival];
+        getChannel().sync();
+
+        expect(left).toHaveBeenCalledTimes(1);
+        expect(joined).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not send while disconnected (game messages are resent after reconnecting)', async () => {
+        const { online, getChannel } = setup();
+        const connecting = online.connect();
+        const channel = getChannel();
+        channel.setStatus('SUBSCRIBED');
+        channel.sync();
+        await connecting;
+
+        channel.setStatus('CHANNEL_ERROR');
+        online.send('commit', { round: 1 });
+        expect(channel.sent).toHaveLength(0);
+
+        channel.setStatus('SUBSCRIBED');
+        online.send('commit', { round: 1 });
+        expect(channel.sent).toHaveLength(1);
+    });
+
+    it('does not report a disconnection after being closed on purpose', async () => {
+        const { online, getChannel } = setup();
+        const connecting = online.connect();
+        const channel = getChannel();
+        channel.setStatus('SUBSCRIBED');
+        channel.sync();
+        await connecting;
+        const onConnection = jest.fn();
+        online.on('connection', onConnection);
+
+        online.close();
+        channel.setStatus('CLOSED');
+
+        expect(onConnection).not.toHaveBeenCalled();
     });
 });
 

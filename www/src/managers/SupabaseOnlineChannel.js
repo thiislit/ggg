@@ -40,7 +40,9 @@ export function createPlayerProfile({ name, avatar, species, planet }) {
  * - Broadcast: mensajes de juego (emojis, y más adelante las jugadas).
  * No necesita tablas en la base de datos.
  *
- * Eventos locales que emite (vía `on`): 'rival-joined', 'rival-left', 'room-full'.
+ * Eventos locales que emite (vía `on`): 'rival-joined', 'rival-left', 'room-full'
+ * y 'connection' { connected } cuando se pierde o recupera la conexión.
+ * Un rival que vuelve tras un corte (mismo id) vuelve a emitir 'rival-joined'.
  */
 export class SupabaseOnlineChannel extends OnlineChannel {
     constructor({ client, roomCode, profile, now = Date.now }) {
@@ -53,6 +55,8 @@ export class SupabaseOnlineChannel extends OnlineChannel {
         this.entered = false;
         this.rival = null;
         this.pendingFirstSync = null;
+        this.connected = true;
+        this.trackedMeta = null;
     }
 
     /**
@@ -97,12 +101,22 @@ export class SupabaseOnlineChannel extends OnlineChannel {
             });
 
             this.channel.subscribe((status) => {
-                if (status === 'SUBSCRIBED' && !subscribed) {
-                    subscribed = true;
-                    // Si la sala está vacía puede que no llegue ningún 'sync': no esperamos para siempre.
-                    firstSyncTimer = setTimeout(succeed, FIRST_SYNC_TIMEOUT_MS);
-                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                    fail(new Error(status));
+                if (this.closed) return;
+                if (status === 'SUBSCRIBED') {
+                    if (!subscribed) {
+                        subscribed = true;
+                        // Si la sala está vacía puede que no llegue ningún 'sync': no esperamos para siempre.
+                        firstSyncTimer = setTimeout(succeed, FIRST_SYNC_TIMEOUT_MS);
+                    } else {
+                        this.onReconnected();
+                    }
+                } else if (
+                    status === 'CHANNEL_ERROR' ||
+                    status === 'TIMED_OUT' ||
+                    status === 'CLOSED'
+                ) {
+                    if (this.pendingFirstSync) fail(new Error(status));
+                    else this.onDisconnected();
                 }
             });
         });
@@ -111,9 +125,31 @@ export class SupabaseOnlineChannel extends OnlineChannel {
     /** Se anuncia en la sala: a partir de aquí el rival nos ve. */
     async enter() {
         if (!this.channel || this.closed) return;
-        await this.channel.track({ ...this.profile, joinedAt: this.now() });
+        // Se guarda para volver a anunciarse igual (mismo joinedAt) tras una reconexión
+        this.trackedMeta = { ...this.profile, joinedAt: this.now() };
+        await this.channel.track(this.trackedMeta);
         this.entered = true;
         this.handleSync();
+    }
+
+    /**
+     * Supabase reconecta solo y vuelve a entrar al canal, pero NO vuelve a anunciar
+     * la presencia: hay que hacer track otra vez o el rival nos daría por desconectados.
+     */
+    onReconnected() {
+        if (!this.connected) {
+            this.connected = true;
+            this.receive('connection', { connected: true });
+        }
+        if (this.entered && this.trackedMeta) {
+            Promise.resolve(this.channel?.track(this.trackedMeta)).catch(() => {});
+        }
+    }
+
+    onDisconnected() {
+        if (!this.connected) return;
+        this.connected = false;
+        this.receive('connection', { connected: false });
     }
 
     /** Miembros de la sala ordenados por llegada (el primero es el anfitrión). */
@@ -157,6 +193,9 @@ export class SupabaseOnlineChannel extends OnlineChannel {
 
     send(type, data) {
         if (this.closed || !this.channel) return;
+        // Sin conexión no se envía: Supabase caería a su API REST (en vías de retirarse y
+        // gasta cuota). OnlineMatch reenvía lo pendiente en cuanto se recupera la conexión.
+        if (typeof this.channel.state === 'string' && this.channel.state !== 'joined') return;
         this.channel.send({ type: 'broadcast', event: 'msg', payload: { type, data } });
     }
 

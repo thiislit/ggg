@@ -8,6 +8,13 @@
  * Cada lado verifica que la jugada revelada coincide con la huella recibida,
  * así nadie puede cambiar su jugada después de ver la del rival.
  *
+ * Tolerancia a fallos de red (los mensajes broadcast pueden perderse en un corte):
+ *   - Mientras algo propio está pendiente se reenvía cada RESEND_MS (ready, o commit+reveal).
+ *   - Si llega un mensaje repetido del rival es que no recibió lo nuestro: se le reenvía.
+ *   - Todos los mensajes son idempotentes (los duplicados se ignoran).
+ *   - Tiempo límite propio (setTimeout): si el temporizador visual se congela (app en
+ *     segundo plano), la ronda igualmente se cierra como "no eligió a tiempo".
+ *
  * Elección -1 = no eligió a tiempo.
  */
 
@@ -33,7 +40,9 @@ function randomSalt() {
 }
 
 const VALID_CHOICES = [-1, 0, 1, 2];
-const READY_RESEND_MS = 2000;
+export const RESEND_MS = 2000;
+/** Margen sobre la duración de la ronda antes de cerrar por tiempo (el visual suele llegar antes). */
+export const TIMEOUT_GRACE_MS = 750;
 
 /**
  * @typedef {Object} OnlineMatchOptions
@@ -41,9 +50,13 @@ const READY_RESEND_MS = 2000;
  * @property {(round: number) => void} [onRoundStart] Ambos listos: empieza la ronda
  * @property {() => void} [onRivalLocked] El rival ya eligió (sin saber qué)
  * @property {(myChoice: number, rivalChoice: number, round: number) => void} [onRoundResolved]
+ * @property {(round: number) => void} [onLocalTimeout] Se acabó nuestro tiempo sin elegir
+ * @property {number} [roundDurationMs] Duración de la ronda (activa el tiempo límite propio)
  * @property {() => string} [salt] Generador de sal (inyectable para tests)
  * @property {(fn: () => void, ms: number) => any} [setInterval]
  * @property {(id: any) => void} [clearInterval]
+ * @property {(fn: () => void, ms: number) => any} [setTimeout]
+ * @property {(id: any) => void} [clearTimeout]
  */
 
 export class OnlineMatch {
@@ -58,21 +71,32 @@ export class OnlineMatch {
             onRoundStart = () => {},
             onRivalLocked = () => {},
             onRoundResolved = () => {},
+            onLocalTimeout = () => {},
+            roundDurationMs = null,
             salt = randomSalt,
             setInterval: setIntervalFn = globalThis.setInterval.bind(globalThis),
             clearInterval: clearIntervalFn = globalThis.clearInterval.bind(globalThis),
+            setTimeout: setTimeoutFn = globalThis.setTimeout.bind(globalThis),
+            clearTimeout: clearTimeoutFn = globalThis.clearTimeout.bind(globalThis),
         } = {}
     ) {
         this.channel = channel;
-        this.callbacks = { onRivalReady, onRoundStart, onRivalLocked, onRoundResolved };
+        this.callbacks = {
+            onRivalReady,
+            onRoundStart,
+            onRivalLocked,
+            onRoundResolved,
+            onLocalTimeout,
+        };
+        this.roundDurationMs = roundDurationMs;
         this.makeSalt = salt;
-        this.setIntervalFn = setIntervalFn;
-        this.clearIntervalFn = clearIntervalFn;
+        this.timers = { setIntervalFn, clearIntervalFn, setTimeoutFn, clearTimeoutFn };
 
         this.round = 0;
         this.meReady = false;
         this.rivalReady = false;
-        this.readyResend = null;
+        this.roundTimer = null;
+        this.destroyed = false;
         this.resetRoundState();
 
         this.unsubscribers = [
@@ -80,6 +104,8 @@ export class OnlineMatch {
             channel.on('commit', (data) => this.onCommit(data)),
             channel.on('reveal', (data) => this.onReveal(data)),
         ];
+        // Un único "latido" que reenvía lo que esté pendiente (no envía nada si no hay nada)
+        this.pulse = setIntervalFn(() => this.resendPending(), RESEND_MS);
     }
 
     resetRoundState() {
@@ -92,22 +118,56 @@ export class OnlineMatch {
         this.resolved = false;
     }
 
+    // --- ENVÍOS ---
+
+    // `reply: true` marca una respuesta a un duplicado: las respuestas nunca generan
+    // otra respuesta, así dos clientes no pueden quedar rebotándose mensajes.
+
+    sendReady(round, reply = false) {
+        this.channel.send('ready', { round, reply });
+    }
+
+    sendCommit(reply = false) {
+        this.channel.send('commit', { round: this.round, hash: this.myHash, reply });
+    }
+
+    sendReveal() {
+        this.channel.send('reveal', {
+            round: this.round,
+            choice: this.myChoice,
+            salt: this.mySalt,
+        });
+    }
+
+    /** Reenvía lo que el rival podría no haber recibido. */
+    resendPending() {
+        if (this.destroyed) return;
+        if (this.meReady) {
+            this.sendReady(this.round + 1);
+        } else if (this.myHash && !this.resolved) {
+            this.sendCommit();
+            if (this.revealed) this.sendReveal();
+        }
+    }
+
     // --- LISTO PARA LA SIGUIENTE RONDA ---
 
     markReady() {
-        if (this.meReady) return;
+        if (this.meReady || this.destroyed) return;
         this.meReady = true;
-        const next = this.round + 1;
-        this.channel.send('ready', { round: next });
-        // Por si el rival aún no estaba escuchando (p. ej. todavía cargando la escena)
-        this.readyResend = this.setIntervalFn(() => {
-            this.channel.send('ready', { round: next });
-        }, READY_RESEND_MS);
+        this.sendReady(this.round + 1);
         this.maybeStartRound();
     }
 
     onReady(data) {
-        if (data?.round !== this.round + 1 || this.rivalReady) return;
+        const round = data?.round;
+        // El rival sigue esperando a que empiece una ronda que nosotros ya empezamos:
+        // no le llegó nuestro 'ready'. Se lo repetimos.
+        if (round === this.round && this.round > 0) {
+            if (!data.reply) this.sendReady(this.round, true);
+            return;
+        }
+        if (round !== this.round + 1 || this.rivalReady) return;
         this.rivalReady = true;
         this.callbacks.onRivalReady();
         this.maybeStartRound();
@@ -115,32 +175,51 @@ export class OnlineMatch {
 
     maybeStartRound() {
         if (!this.meReady || !this.rivalReady) return;
-        this.stopReadyResend();
         this.round += 1;
         this.meReady = false;
         this.rivalReady = false;
         this.resetRoundState();
+        this.armRoundTimer();
         this.callbacks.onRoundStart(this.round);
     }
 
-    stopReadyResend() {
-        if (this.readyResend) this.clearIntervalFn(this.readyResend);
-        this.readyResend = null;
+    armRoundTimer() {
+        this.clearRoundTimer();
+        if (!this.roundDurationMs) return;
+        const round = this.round;
+        this.roundTimer = this.timers.setTimeoutFn(() => {
+            this.roundTimer = null;
+            if (this.destroyed || this.round !== round || this.myChoice !== undefined) return;
+            this.callbacks.onLocalTimeout(round);
+        }, this.roundDurationMs + TIMEOUT_GRACE_MS);
+    }
+
+    clearRoundTimer() {
+        if (this.roundTimer) this.timers.clearTimeoutFn(this.roundTimer);
+        this.roundTimer = null;
     }
 
     // --- ELEGIR (COMPROMISO) ---
 
     lock(choice) {
-        if (this.round === 0 || this.myChoice !== undefined) return;
+        if (this.destroyed || this.round === 0 || this.myChoice !== undefined) return;
+        this.clearRoundTimer();
         this.myChoice = VALID_CHOICES.includes(choice) ? choice : -1;
         this.mySalt = this.makeSalt();
         this.myHash = hashChoice(`${this.round}:${this.myChoice}:${this.mySalt}`);
-        this.channel.send('commit', { round: this.round, hash: this.myHash });
+        this.sendCommit();
         this.maybeReveal();
     }
 
     onCommit(data) {
-        if (data?.round !== this.round || this.rivalHash) return;
+        if (data?.round !== this.round) return;
+        if (this.rivalHash) {
+            // Duplicado: el rival sigue reenviando porque le falta algo nuestro
+            if (data.reply) return;
+            if (this.myHash) this.sendCommit(true);
+            if (this.revealed) this.sendReveal();
+            return;
+        }
         this.rivalHash = String(data.hash);
         this.callbacks.onRivalLocked();
         this.maybeReveal();
@@ -151,11 +230,7 @@ export class OnlineMatch {
     maybeReveal() {
         if (this.revealed || !this.myHash || !this.rivalHash) return;
         this.revealed = true;
-        this.channel.send('reveal', {
-            round: this.round,
-            choice: this.myChoice,
-            salt: this.mySalt,
-        });
+        this.sendReveal();
         this.maybeResolve();
     }
 
@@ -177,7 +252,10 @@ export class OnlineMatch {
     }
 
     destroy() {
-        this.stopReadyResend();
+        if (this.destroyed) return;
+        this.destroyed = true;
+        this.clearRoundTimer();
+        this.timers.clearIntervalFn(this.pulse);
         this.unsubscribers.forEach((off) => off());
         this.unsubscribers = [];
     }

@@ -10,6 +10,8 @@ import { buildRivalOpponent } from '../../ui/components/CombatParticipants.js';
 import { DialogueBox } from '../../ui/components/DialogueBox.js';
 
 const RETURN_TO_LOBBY_MS = 3000;
+/** Tiempo que se espera a un rival desconectado antes de dar la partida por terminada. */
+export const RIVAL_GRACE_MS = 20000;
 
 /**
  * Todo lo específico de Online Versus dentro de GameScene:
@@ -30,6 +32,9 @@ export class OnlineVersusController {
         this.match = null;
         this.emojiReactions = null;
         this.statusText = null;
+        this.alertText = null;
+        this.rivalGraceTimer = null;
+        this.connectionLost = false;
         this.destroyed = false;
     }
 
@@ -65,9 +70,16 @@ export class OnlineVersusController {
             this.emojiReactions?.showInDisplay(scene.choiceControls?.onlineRivalDisplay, emoji);
         });
         this.channel.on('rival-left', () => this.onRivalLeft());
+        this.channel.on('rival-joined', (rival) => this.onRivalRejoined(rival));
+        this.channel.on('connection', ({ connected }) => this.onConnectionChange(connected));
 
         if (this.isRealMatch) {
             this.match = new OnlineMatch(this.channel, {
+                roundDurationMs: CONFIG.TIMING.ROUND_DURATION,
+                // Respaldo si el temporizador visual se congeló (app en segundo plano)
+                onLocalTimeout: () => {
+                    if (scene.currentState === GAME_STATE.COUNTDOWN) this.lockChoice(-1);
+                },
                 onRivalReady: () => {
                     // Aviso visual: el rival ya pulsó PLAY/NEXT
                     if (scene.currentState === GAME_STATE.IDLE) {
@@ -104,6 +116,8 @@ export class OnlineVersusController {
 
     /** El jugador eligió (o se le acabó el tiempo: -1). Se resuelve al llegar ambas jugadas. */
     lockChoice(choice) {
+        // Puede llegar dos veces (botón + tiempo límite): solo vale la primera
+        if (!this.match || this.match.myChoice !== undefined) return;
         const scene = this.scene;
         scene.setState(GAME_STATE.LOCKED);
         scene.ui.stopTimer();
@@ -134,7 +148,7 @@ export class OnlineVersusController {
                 .text(width / 2, scene.barY - 40, '', {
                     fontFamily: CONFIG.FONTS.MAIN,
                     fontSize: CONFIG.FONTS.SIZES.NORMAL,
-                    fill: CONFIG.THEME.primaryStr,
+                    color: CONFIG.THEME.primaryStr,
                     backgroundColor: '#000000',
                     padding: { x: 12, y: 8 },
                 })
@@ -155,10 +169,78 @@ export class OnlineVersusController {
         this.statusText?.setVisible(false);
     }
 
-    onRivalLeft() {
+    /** Aviso grande en el centro (conexión propia o del rival). */
+    showAlert(text) {
         const scene = this.scene;
+        if (!this.alertText) {
+            const { width, height } = scene.scale;
+            this.alertText = scene.add
+                .text(width / 2, height / 2, '', {
+                    fontFamily: CONFIG.FONTS.MAIN,
+                    fontSize: CONFIG.FONTS.SIZES.NORMAL,
+                    color: CONFIG.THEME.secondaryStr,
+                    backgroundColor: '#000000',
+                    align: 'center',
+                    lineSpacing: 10,
+                    padding: { x: 16, y: 12 },
+                })
+                .setOrigin(0.5)
+                .setDepth(3500);
+        }
+        this.alertText.setText(text).setVisible(true);
+    }
+
+    hideAlert() {
+        this.alertText?.setVisible(false);
+    }
+
+    /** Muestra el aviso más importante que siga vigente (o ninguno). */
+    refreshAlert() {
+        if (this.connectionLost) this.showAlert('CONNECTION LOST\nRECONNECTING...');
+        else if (this.rivalGraceTimer) this.showAlert('RIVAL DISCONNECTED\nWAITING FOR THEM...');
+        else this.hideAlert();
+    }
+
+    isMatchOver() {
+        return [GAME_STATE.FATALITY, GAME_STATE.GAME_OVER].includes(this.scene.currentState);
+    }
+
+    onConnectionChange(connected) {
+        if (!this.isRealMatch || this.isMatchOver()) return;
+        this.connectionLost = !connected;
+        this.refreshAlert();
+    }
+
+    /**
+     * El rival desapareció de la sala. Puede ser un corte breve (túnel, cambio de red,
+     * app en segundo plano): se le da RIVAL_GRACE_MS para volver antes de terminar.
+     */
+    onRivalLeft() {
         // Al terminar la partida ambos salen de la sala: eso no es un abandono
-        if ([GAME_STATE.FATALITY, GAME_STATE.GAME_OVER].includes(scene.currentState)) return;
+        if (this.isMatchOver()) return;
+        if (!this.isRealMatch) return this.endMatchRivalGone();
+        if (this.rivalGraceTimer) return;
+        this.rivalGraceTimer = this.scene.time.delayedCall(RIVAL_GRACE_MS, () => {
+            this.rivalGraceTimer = null;
+            this.endMatchRivalGone();
+        });
+        this.refreshAlert();
+    }
+
+    /** El rival volvió dentro del periodo de gracia: la partida sigue donde estaba. */
+    onRivalRejoined(rival) {
+        if (!this.rivalGraceTimer) return;
+        if (this.rival?.id && rival?.id && rival.id !== this.rival.id) return; // otra persona
+        this.rivalGraceTimer.remove(false);
+        this.rivalGraceTimer = null;
+        this.refreshAlert();
+        // Los reenvíos de OnlineMatch recuperan cualquier mensaje perdido durante el corte
+    }
+
+    endMatchRivalGone() {
+        const scene = this.scene;
+        if (this.isMatchOver()) return;
+        this.hideAlert();
 
         const { width, height } = scene.scale;
         const notice = new DialogueBox(
@@ -184,9 +266,12 @@ export class OnlineVersusController {
     destroy() {
         if (this.destroyed) return;
         this.destroyed = true;
+        this.rivalGraceTimer?.remove(false);
+        this.rivalGraceTimer = null;
         this.match?.destroy();
         this.match = null;
         this.statusText = null;
+        this.alertText = null;
         this.channel?.close();
         this.channel = null;
         this.emojiReactions?.destroy();

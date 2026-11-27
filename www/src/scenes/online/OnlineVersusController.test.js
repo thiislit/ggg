@@ -5,7 +5,7 @@ jest.mock('../../ui/components/DialogueBox.js', () => ({
         .mockImplementation((scene, x, y, text) => ({ text, destroy: jest.fn() })),
 }));
 
-const { OnlineVersusController } = require('./OnlineVersusController.js');
+const { OnlineVersusController, RIVAL_GRACE_MS } = require('./OnlineVersusController.js');
 const { OnlineChannel } = require('../../managers/OnlineChannel.js');
 const { GAME_STATE } = require('../../constants/game.js');
 
@@ -191,19 +191,74 @@ describe('OnlineVersusController', () => {
         expect(rivalDisplay.list[1].text).toBe('😎');
     });
 
-    it('returns to the lobby when the rival leaves mid-match', () => {
+    const findTimer = (scene, ms) => scene.time.delayedCall.mock.calls.find(([t]) => t === ms);
+
+    it('waits for a disconnected rival, then returns to the lobby if they never come back', () => {
         const { a } = createLinkedChannels();
         const scene = createScene();
-        const controller = new OnlineVersusController(scene, { channel: a });
+        const controller = new OnlineVersusController(scene, { channel: a, rival: { id: 'r1' } });
         controller.build(BUILD);
 
         a.receive('rival-left');
 
+        // Periodo de gracia: aviso visible, la partida sigue
+        expect(controller.alertText.text).toBe('RIVAL DISCONNECTED\nWAITING FOR THEM...');
+        expect(scene.currentState).toBe(GAME_STATE.IDLE);
+        expect(scene.activeBubbles).toHaveLength(0);
+
+        findTimer(scene, RIVAL_GRACE_MS)[1](); // no volvió a tiempo
         expect(scene.activeBubbles[0].text).toBe('YOUR RIVAL LEFT THE ROOM');
         expect(scene.currentState).toBe(GAME_STATE.GAME_OVER);
-        const timer = scene.time.delayedCall.mock.calls.find(([ms]) => ms === 3000);
-        timer[1]();
+        findTimer(scene, 3000)[1]();
         expect(scene.scene.start).toHaveBeenCalledWith('OnlineLobbyScene');
+    });
+
+    it('keeps playing when the rival reconnects within the grace period', () => {
+        const { a } = createLinkedChannels();
+        const scene = createScene();
+        const controller = new OnlineVersusController(scene, { channel: a, rival: { id: 'r1' } });
+        controller.build(BUILD);
+
+        a.receive('rival-left');
+        const grace = scene.time.delayedCall.mock.results.find(
+            (_, i) => scene.time.delayedCall.mock.calls[i][0] === RIVAL_GRACE_MS
+        ).value;
+        a.receive('rival-joined', { id: 'r1' });
+
+        expect(grace.remove).toHaveBeenCalled();
+        expect(controller.alertText.visible).toBe(false);
+        expect(controller.controlsRounds).toBe(true);
+        expect(scene.currentState).toBe(GAME_STATE.IDLE);
+    });
+
+    it('shows a reconnecting notice while our own connection is down', () => {
+        const { a } = createLinkedChannels();
+        const controller = new OnlineVersusController(createScene(), { channel: a });
+        controller.build(BUILD);
+
+        a.receive('connection', { connected: false });
+        expect(controller.alertText.text).toBe('CONNECTION LOST\nRECONNECTING...');
+
+        a.receive('connection', { connected: true });
+        expect(controller.alertText.visible).toBe(false);
+    });
+
+    it('closes the round on its own if the visual timer froze (app in background)', () => {
+        const { a, b, flush } = createLinkedChannels();
+        const sceneA = createScene();
+        const host = new OnlineVersusController(sceneA, { channel: a });
+        const guest = new OnlineVersusController(createScene(), { channel: b });
+        host.build(BUILD);
+        guest.build(BUILD);
+        host.requestRound();
+        guest.requestRound();
+        flush();
+        expect(sceneA.currentState).toBe(GAME_STATE.COUNTDOWN);
+
+        jest.advanceTimersByTime(10000); // ningún toque, Phaser congelado
+
+        expect(sceneA.currentState).toBe(GAME_STATE.LOCKED);
+        expect(host.match.myChoice).toBe(-1);
     });
 
     it('ignores the rival leaving once the match is already over', () => {
