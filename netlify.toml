@@ -1,0 +1,63 @@
+# Netlify: publica la carpeta www solo si lint y tests pasan.
+# Si el build falla, Netlify mantiene publicada la última versión buena.
+[build]
+  publish = "www"
+  command = "npm run verify"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Cabeceras de seguridad básicas para todo el sitio
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Imágenes, audio y fuentes casi nunca cambian: el navegador las guarda 1 día
+# (carga más rápida). El código (index.html, src/, assets/js/) se revalida siempre
+# con la configuración por defecto de Netlify, así cada deploy llega al instante.
+[[headers]]
+  for = "/assets/avatars/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/assets/backgrounds/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/assets/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/assets/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/assets/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/assets/planets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/assets/player_avatars/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/assets/sounds/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/assets/story/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
