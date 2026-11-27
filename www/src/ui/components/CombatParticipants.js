@@ -3,6 +3,27 @@ import { DataManager } from '../../managers/DataManager.js';
 import { HeartBar } from './HeartBar.js';
 import { LAYOUT } from '../../data/Layout.js';
 
+/** Planetas que puede elegir un jugador en su perfil. */
+export const PLAYER_PLANETS = {
+    EARTH: { texture: 'planet_tierra', anim: 'anim_earth' },
+    MARS: { texture: 'planet_mars', anim: 'anim_mars' },
+    KEPLER: { texture: 'planet_kepler', anim: 'anim_kepler' },
+    NEBULA: { texture: 'planet_nebula', anim: 'anim_nebula' },
+};
+
+/** Convierte el perfil de un jugador online en el formato de oponente que usa la escena. */
+export function buildRivalOpponent(rival) {
+    const planetName = String(rival?.planet || 'EARTH').toUpperCase();
+    return {
+        name: String(rival?.name || 'RIVAL').slice(0, 16),
+        species: String(rival?.species || 'HUMAN'),
+        avatar: rival?.avatar,
+        planet: { name: planetName, ...(PLAYER_PLANETS[planetName] || PLAYER_PLANETS.EARTH) },
+        stats: { health: 3 },
+        dialogues: {},
+    };
+}
+
 /** Crea y mantiene tarjetas, vidas y avatares de ambos combatientes. */
 export class CombatParticipants {
     constructor(scene, enemy, elements) {
@@ -41,12 +62,7 @@ export class CombatParticipants {
         const border = this.scene.add.graphics();
         border.lineStyle(2, CONFIG.THEME.primary, 0.6);
         border.strokeCircle(0, planetCenterY, planetSize / 2);
-        const planetConfigs = {
-            EARTH: { texture: 'planet_tierra', anim: 'anim_earth' },
-            MARS: { texture: 'planet_mars', anim: 'anim_mars' },
-            KEPLER: { texture: 'planet_kepler', anim: 'anim_kepler' },
-            NEBULA: { texture: 'planet_nebula', anim: 'anim_nebula' },
-        };
+        const planetConfigs = PLAYER_PLANETS;
         const planetKey = planet.toUpperCase();
         const planetConfig =
             this.enemy && planetKey === this.enemy.planet.name

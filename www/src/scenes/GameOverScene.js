@@ -13,6 +13,7 @@ export class GameOverScene extends Phaser.Scene {
         const isNewRecord = data.isNewRecord || false;
         const isCampaign = data.isCampaign || false;
         const status = data.campaignStatus || '';
+        const isOnline = data.isOnline || false;
 
         const { width, height } = this.scale;
 
@@ -134,7 +135,11 @@ export class GameOverScene extends Phaser.Scene {
         let btnText = 'RESTART';
         let btnAction = () => this.scene.start('GameScene');
 
-        if (isCampaign) {
+        if (isOnline) {
+            // Volver a la sala para crear otra o unirse (no empezar una partida contra la CPU)
+            btnText = 'PLAY AGAIN';
+            btnAction = () => this.scene.start('OnlineLobbyScene');
+        } else if (isCampaign) {
             if (status === 'LEVEL_UP') {
                 btnText = 'NEXT SECTOR'; // Seguir jugando (GameScene cargará el siguiente nivel)
             } else if (status === 'RETRY_LEVEL') {
