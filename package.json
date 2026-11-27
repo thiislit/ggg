@@ -1,6 +1,6 @@
 {
   "name": "rps-retro",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Juego retro de Piedra Papel o Tijera",
   "type": "module",
   "main": "src/main.js",
@@ -14,7 +14,9 @@
     "verify": "npm run lint && npm test -- --runInBand",
     "lint:fix": "eslint \"www/src/**/*.js\" --fix",
     "format": "prettier --write \"{src,www}/**/*.{js,jsx}\"",
-    "vendor:supabase": "node -e \"require('fs').copyFileSync('node_modules/@supabase/supabase-js/dist/umd/supabase.js','www/assets/js/supabase.min.js')\""
+    "vendor:supabase": "node -e \"require('fs').copyFileSync('node_modules/@supabase/supabase-js/dist/umd/supabase.js','www/assets/js/supabase.min.js')\"",
+    "version:sync": "node scripts/sync-version.mjs",
+    "version": "node scripts/sync-version.mjs && git add www/src/constants/version.js android/app/build.gradle ios/App/App.xcodeproj/project.pbxproj"
   },
   "keywords": [],
   "author": "",

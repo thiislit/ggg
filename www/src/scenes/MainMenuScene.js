@@ -2,6 +2,7 @@ import { DataManager } from '../managers/DataManager.js';
 import { CONFIG } from '../data/config.js';
 import { CampaignManager } from '../managers/CampaignManager.js';
 import { RetroButton } from '../ui/components/RetroButton.js';
+import { APP_VERSION } from '../constants/version.js';
 
 export class MainMenuScene extends Phaser.Scene {
     constructor() {
@@ -166,7 +167,7 @@ export class MainMenuScene extends Phaser.Scene {
 
         // --- VERSIÓN ---
         this.versionText = this.add
-            .text(width - 20, height - 20, 'v1.1', {
+            .text(width - 20, height - 20, `v${APP_VERSION}`, {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: CONFIG.FONTS.SIZES.SMALL,
                 fill: CONFIG.THEME.secondaryStr,
