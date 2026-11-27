@@ -38,5 +38,8 @@ const config = {
 
 const game = new Phaser.Game(config);
 
+// Acceso de solo lectura para las pruebas en navegador (e2e/) y depuración desde la consola
+window.__RPS_GAME__ = game;
+
 // Initialize MobileManager
 MobileManager.init(game);

@@ -15,6 +15,8 @@ interface Window {
     /** Supabase UMD: www/assets/js/supabase.min.js */
     supabase?: { createClient: (url: string, key: string, options?: any) => any };
     Sentry?: any;
+    /** Instancia del juego expuesta para pruebas e2e y depuración (www/src/main.js). */
+    __RPS_GAME__?: Phaser.Game;
 }
 
 declare var Capacitor: Window['Capacitor'];

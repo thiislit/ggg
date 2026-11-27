@@ -8,7 +8,7 @@ module.exports = {
   extensionsToTreatAsEsm: [".ts", ".tsx", ".jsx"],
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json', 'node'],
   transformIgnorePatterns: ['/node_modules/'], // ignora node_modules
-  testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],
+  testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/', '/e2e/'], // e2e/ = Playwright
   modulePathIgnorePatterns: ['<rootDir>/android/', '<rootDir>/ios/'],
   moduleNameMapper: {
     '\\.(css|scss)$': 'identity-obj-proxy', // mocks para estilos
