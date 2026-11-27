@@ -74,6 +74,14 @@ export class GameScene extends Phaser.Scene {
         // Canal ya conectado desde OnlineLobbyScene (null = práctica con rival simulado)
         this.providedChannel = data.channel || null;
         this.rivalProfile = data.rival || null;
+
+        // Phaser conserva los datos de inicio si la escena se vuelve a abrir SIN datos
+        // (scene.start('GameScene')). Sin esto, Quick Play o Historia heredarían
+        // { isOnline, channel, rival } de la última partida online.
+        this.events.once('shutdown', () => {
+            this.sys.settings.data = {};
+        });
+
         let enemy = OPPONENTS.ZORG; // Initialize with a default valid enemy
 
         // Cargar Datos
