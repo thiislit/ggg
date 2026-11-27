@@ -41,14 +41,14 @@ export class Switch extends Phaser.GameObjects.Container {
             .text(this.valueX + 15, 0, 'OFF', {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: '8px',
-                fill: this.colors.ACCENT_STR,
+                color: this.colors.ACCENT_STR,
             })
             .setOrigin(0.5);
         this.onText = this.scene.add
             .text(this.valueX + 65, 0, 'ON', {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: '8px',
-                fill: this.colors.ACCENT_STR,
+                color: this.colors.ACCENT_STR,
             })
             .setOrigin(0.5);
         this.add([this.offText, this.onText]);

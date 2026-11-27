@@ -40,6 +40,10 @@ export function createEmojiDisplay(
  * Con `showInDisplay` también se pintan los emojis del rival en su contenedor.
  */
 export class EmojiReactions {
+    /**
+     * @param {Phaser.Scene} scene
+     * @param {{ emojis?: string[], cooldownMs?: number, holdMs?: number, onSend?: (emoji: string) => void }} [options]
+     */
     constructor(
         scene,
         { emojis = REACTION_EMOJIS, cooldownMs = 2000, holdMs = 2500, onSend = () => {} } = {}

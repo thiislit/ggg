@@ -1,5 +1,16 @@
 import { ASSET_KEYS } from '../constants/AssetKeys.js';
 
+/**
+ * Oponente que muestra la escena de combate (CPU o, en Online Versus, el otro jugador).
+ * @typedef {Object} Opponent
+ * @property {string} name
+ * @property {string} species
+ * @property {string} avatar Clave de textura del avatar
+ * @property {{ name: string, texture: string, anim: string }} planet
+ * @property {{ health: number, difficulty?: string }} stats
+ * @property {{ intro?: string, win?: string, lose?: string }} dialogues
+ */
+
 export const OPPONENTS = {
     ZORG: {
         name: 'ZORG',

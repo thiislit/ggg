@@ -135,8 +135,11 @@ export class SplashScene extends Phaser.Scene {
         this.sound.pauseOnBlur = false;
 
         const unlockAudio = () => {
-            if (this.sound.context.state === 'suspended') {
-                this.sound.context.resume();
+            // Solo Web Audio tiene `context`; con audio HTML5 no existe y no hay nada que desbloquear
+            const audioContext = /** @type {Phaser.Sound.WebAudioSoundManager} */ (this.sound)
+                .context;
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
             }
 
             // Lógica inteligente: Solo reproducir si estamos en escenas que permiten música
@@ -370,7 +373,7 @@ export class SplashScene extends Phaser.Scene {
                     .text(tx, ty, char, {
                         fontFamily: '"Press Start 2P"',
                         fontSize: fontSize,
-                        fill: color,
+                        color: color,
                     })
                     .setOrigin(0.5)
                     .setRotation(finalAngleRad + Math.PI / 2)
@@ -421,7 +424,8 @@ export class SplashScene extends Phaser.Scene {
             onUpdate: () => {
                 const color = Phaser.Display.Color.HSVToRGB(colorCycle.h, 1, 1).color;
                 title.list.forEach((child) => {
-                    if (child.setTint) child.setTint(color);
+                    const tintable = /** @type {Phaser.GameObjects.Text} */ (child);
+                    if (tintable.setTint) tintable.setTint(color);
                 });
             },
         });

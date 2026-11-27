@@ -81,6 +81,7 @@ export class GameScene extends Phaser.Scene {
             this.sys.settings.data = {};
         });
 
+        /** @type {import('../data/Opponents.js').Opponent} */
         let enemy = OPPONENTS.ZORG; // Initialize with a default valid enemy
 
         // Cargar Datos
@@ -100,7 +101,9 @@ export class GameScene extends Phaser.Scene {
             this.p2Health = 3; // For campaign, health is always 3
 
             // Cambiar fondo según nivel
-            const bgScene = this.scene.get('BackgroundScene');
+            const bgScene = /** @type {import('./BackgroundScene.js').BackgroundScene} */ (
+                this.scene.get('BackgroundScene')
+            );
             if (bgScene) {
                 bgScene.changeBackground(levelConfig.bg);
             }
@@ -150,7 +153,9 @@ export class GameScene extends Phaser.Scene {
                 selectedBg = Phaser.Utils.Array.GetRandom(standardBackgrounds);
             }
 
-            const bgScene = this.scene.get('BackgroundScene');
+            const bgScene = /** @type {import('./BackgroundScene.js').BackgroundScene} */ (
+                this.scene.get('BackgroundScene')
+            );
             if (bgScene) {
                 bgScene.changeBackground(selectedBg);
             }
@@ -493,8 +498,10 @@ export class GameScene extends Phaser.Scene {
         // --- LÓGICA DE CAMPAÑA ---
         if (CampaignManager.isActive()) {
             if (isPlayerWin) {
-                const result = CampaignManager.registerWin();
-                campaignStatus = result.status;
+                // registerWin devuelve una promesa al subir de nivel (advanceLevel es async):
+                // sin await, LEVEL_UP / CAMPAIGN_COMPLETE se perdían y no se llegaba al epílogo.
+                const result = await CampaignManager.registerWin();
+                campaignStatus = result ? result.status : null;
             } else {
                 const lossResult = CampaignManager.registerLoss();
                 campaignStatus = lossResult ? lossResult.status : null;
@@ -696,7 +703,9 @@ export class GameScene extends Phaser.Scene {
 
     applyTheme() {
         const bgDim = DataManager.isBgDim();
-        const bgScene = this.scene.get('BackgroundScene');
+        const bgScene = /** @type {import('./BackgroundScene.js').BackgroundScene} */ (
+            this.scene.get('BackgroundScene')
+        );
         if (bgScene && bgScene.applyDim) {
             bgScene.applyDim(bgDim);
         }
@@ -734,14 +743,14 @@ export class GameScene extends Phaser.Scene {
             .text(width / 2, height / 2, 'PAUSED', {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: CONFIG.FONTS.SIZES.TITLE,
-                fill: CONFIG.COLORS.TEXT_MAIN,
+                color: CONFIG.COLORS.TEXT_MAIN,
             })
             .setOrigin(0.5);
         const subTxt = this.add
             .text(width / 2, height / 2 + 60, 'TAP TO RESUME', {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: CONFIG.FONTS.SIZES.NORMAL,
-                fill: CONFIG.COLORS.P1_BLUE,
+                color: CONFIG.THEME.primaryStr, // Phaser necesita un color en texto (#rrggbb), no un número
             })
             .setOrigin(0.5);
         this.pauseOverlay.add([bg, txt, subTxt]);

@@ -32,7 +32,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(width / 2, height * 0.1, 'OPTIONS', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '28px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5);
 
@@ -45,7 +45,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(sliderX, height * 0.2, 'MUSIC VOLUME', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '12px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5);
 
@@ -65,7 +65,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(sliderX, height * 0.32, 'SFX VOLUME', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '12px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5);
 
@@ -98,7 +98,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(width / 2 - 140, startY, 'MUTE GAME', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0, 0.5);
 
@@ -118,7 +118,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(width / 2 - 140, startY + rowStep, 'VIBRATION', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0, 0.5);
 
@@ -130,7 +130,9 @@ export class SettingsScene extends Phaser.Scene {
             DataManager.isBgDim(),
             (newState) => {
                 DataManager.setBgDim(newState);
-                const bgScene = this.scene.get('BackgroundScene');
+                const bgScene = /** @type {import('./BackgroundScene.js').BackgroundScene} */ (
+                    this.scene.get('BackgroundScene')
+                );
                 if (bgScene) bgScene.applyDim(newState);
             }
         );
@@ -139,7 +141,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(width / 2 - 140, startY + rowStep * 2, 'BG DIM', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0, 0.5);
 
@@ -157,21 +159,21 @@ export class SettingsScene extends Phaser.Scene {
             .text(labelX, 0, 'BG THEME', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0, 0.5);
         this.themeValue = this.add
             .text(valueX + 40, 0, bgThemes[bgIdx].name, {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5);
         const tL = this.add
             .text(valueX - 10, 0, '<', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '20px',
-                fill: colors.ACCENT_STR,
+                color: colors.ACCENT_STR,
             })
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
@@ -179,7 +181,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(valueX + 90, 0, '>', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '20px',
-                fill: colors.ACCENT_STR,
+                color: colors.ACCENT_STR,
             })
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
@@ -192,7 +194,9 @@ export class SettingsScene extends Phaser.Scene {
             DataManager.setBgTheme(theme.id);
 
             this.themeValue.setText(theme.name);
-            const bgScene = this.scene.get('BackgroundScene');
+            const bgScene = /** @type {import('./BackgroundScene.js').BackgroundScene} */ (
+                this.scene.get('BackgroundScene')
+            );
             if (bgScene && bgScene.changeBackground) bgScene.changeBackground(theme.id);
             this.refreshUIColors();
             this.tweens.add({
@@ -222,21 +226,21 @@ export class SettingsScene extends Phaser.Scene {
             .text(labelX, 0, 'DIFFICULTY', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0, 0.5);
         this.diffValue = this.add
             .text(valueX + 40, 0, this.difficulties[this.diffIdx], {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
-                fill: this.getDiffColor(this.difficulties[this.diffIdx]),
+                color: this.getDiffColor(this.difficulties[this.diffIdx]),
             })
             .setOrigin(0.5);
         const dL = this.add
             .text(valueX - 10, 0, '<', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '20px',
-                fill: colors.ACCENT_STR,
+                color: colors.ACCENT_STR,
             })
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
@@ -244,7 +248,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(valueX + 90, 0, '>', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '20px',
-                fill: colors.ACCENT_STR,
+                color: colors.ACCENT_STR,
             })
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
@@ -277,7 +281,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(width / 2, height * 0.88, 'BACK', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '18px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
@@ -294,7 +298,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(60, height - 30, 'PRIVACY', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '10px',
-                fill: '#666',
+                color: '#666',
             })
             .setOrigin(0, 1)
             .setInteractive({ useHandCursor: true })
@@ -304,7 +308,7 @@ export class SettingsScene extends Phaser.Scene {
             .text(width - 60, height - 30, 'CREDITS', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '10px',
-                fill: '#666',
+                color: '#666',
             })
             .setOrigin(1, 1)
             .setInteractive({ useHandCursor: true })
@@ -318,7 +322,7 @@ export class SettingsScene extends Phaser.Scene {
                     .text(width / 2, height * 0.5, 'DEV: AXEL\nPHASER 3\nv1.1', {
                         fontFamily: '"Press Start 2P"',
                         fontSize: '12px',
-                        fill: colors.ACCENT_STR,
+                        color: colors.ACCENT_STR,
                         align: 'center',
                         backgroundColor: colors.BG_STR,
                     })

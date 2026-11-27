@@ -48,7 +48,9 @@ export class EpilogueScene extends Phaser.Scene {
 
         // 1. Iniciar música y fondo
         AudioManager.playMusic(this, ASSET_KEYS.AUDIO.MUSIC_BGM);
-        const bgScene = this.scene.get('BackgroundScene');
+        const bgScene = /** @type {import('./BackgroundScene.js').BackgroundScene} */ (
+            this.scene.get('BackgroundScene')
+        );
         if (bgScene && bgScene.changeBackground) {
             bgScene.changeBackground(ASSET_KEYS.IMAGES.BG_CAMPAIGN_HARD);
         }
@@ -83,7 +85,7 @@ export class EpilogueScene extends Phaser.Scene {
             .text(width / 2, height - 50, 'TAP TO CONTINUE ►', {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: '14px',
-                fill: '#ffffff',
+                color: '#ffffff',
             })
             .setOrigin(0.5)
             .setAlpha(0)
@@ -221,7 +223,7 @@ export class EpilogueScene extends Phaser.Scene {
                 .text(0, i * 100, line, {
                     fontFamily: CONFIG.FONTS.MAIN,
                     fontSize: isTitle ? '28px' : '18px',
-                    fill: isTitle ? CONFIG.COLORS.P1_BLUE : '#ffffff',
+                    color: isTitle ? CONFIG.THEME.primaryStr : '#ffffff',
                     stroke: '#000000',
                     strokeThickness: 6, // Borde negro grueso para evitar que las letras se intercalen
                     align: 'center',

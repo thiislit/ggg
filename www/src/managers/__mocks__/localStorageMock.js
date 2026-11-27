@@ -1,3 +1,4 @@
+// @ts-nocheck -- utilidad de tests (usa la global `jest`)
 // www/src/managers/__mocks__/localStorageMock.js
 export const localStorageMock = {
     store: Object.create(null),

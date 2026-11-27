@@ -11,7 +11,10 @@ export const PLAYER_PLANETS = {
     NEBULA: { texture: 'planet_nebula', anim: 'anim_nebula' },
 };
 
-/** Convierte el perfil de un jugador online en el formato de oponente que usa la escena. */
+/**
+ * Convierte el perfil de un jugador online en el formato de oponente que usa la escena.
+ * @returns {import('../../data/Opponents.js').Opponent}
+ */
 export function buildRivalOpponent(rival) {
     const planetName = String(rival?.planet || 'EARTH').toUpperCase();
     return {

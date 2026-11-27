@@ -35,7 +35,22 @@ function randomSalt() {
 const VALID_CHOICES = [-1, 0, 1, 2];
 const READY_RESEND_MS = 2000;
 
+/**
+ * @typedef {Object} OnlineMatchOptions
+ * @property {() => void} [onRivalReady] El rival pulsó PLAY/NEXT
+ * @property {(round: number) => void} [onRoundStart] Ambos listos: empieza la ronda
+ * @property {() => void} [onRivalLocked] El rival ya eligió (sin saber qué)
+ * @property {(myChoice: number, rivalChoice: number, round: number) => void} [onRoundResolved]
+ * @property {() => string} [salt] Generador de sal (inyectable para tests)
+ * @property {(fn: () => void, ms: number) => any} [setInterval]
+ * @property {(id: any) => void} [clearInterval]
+ */
+
 export class OnlineMatch {
+    /**
+     * @param {import('./OnlineChannel.js').OnlineChannel} channel
+     * @param {OnlineMatchOptions} [options]
+     */
     constructor(
         channel,
         {

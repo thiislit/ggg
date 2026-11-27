@@ -27,7 +27,7 @@ export class MainMenuScene extends Phaser.Scene {
             .text(width / 2, height * 0.12, `HELLO, ${playerName}`, {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: CONFIG.FONTS.SIZES.LARGE,
-                fill: CONFIG.COLORS.TEXT_MAIN,
+                color: CONFIG.COLORS.TEXT_MAIN,
                 align: 'center',
                 wordWrap: { width: width * 0.9 },
             })
@@ -152,7 +152,7 @@ export class MainMenuScene extends Phaser.Scene {
             .text(0, 0, `RECORD: ${bestStreak} WINS`, {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: '16px',
-                fill: CONFIG.THEME.PRIMARY_STR,
+                color: CONFIG.THEME.PRIMARY_STR,
             })
             .setOrigin(0.5);
 
@@ -170,7 +170,7 @@ export class MainMenuScene extends Phaser.Scene {
             .text(width - 20, height - 20, `v${APP_VERSION}`, {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: CONFIG.FONTS.SIZES.SMALL,
-                fill: CONFIG.THEME.secondaryStr,
+                color: CONFIG.THEME.secondaryStr,
             })
             .setOrigin(1, 1);
 

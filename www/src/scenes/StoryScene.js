@@ -134,7 +134,7 @@ export class StoryScene extends Phaser.Scene {
         this.textObject = this.add.text(-width * 0.42, -boxHeight * 0.4, '', {
             fontFamily: CONFIG.FONTS.MAIN,
             fontSize: '24px',
-            fill: '#00ff00',
+            color: '#00ff00',
             wordWrap: { width: width * 0.84 },
             lineSpacing: 12,
         });
@@ -149,7 +149,7 @@ export class StoryScene extends Phaser.Scene {
             .text(width / 2, height - 30, 'TAP TO CONTINUE ►', {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: '12px',
-                fill: '#ffffff',
+                color: '#ffffff',
             })
             .setOrigin(0.5)
             .setAlpha(0);

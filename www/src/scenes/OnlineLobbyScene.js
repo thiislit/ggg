@@ -42,7 +42,7 @@ export class OnlineLobbyScene extends Phaser.Scene {
             .text(width / 2, height * 0.12, 'ONLINE VERSUS', {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: '28px',
-                fill: CONFIG.THEME.primaryStr,
+                color: CONFIG.THEME.primaryStr,
             })
             .setOrigin(0.5);
 
@@ -50,7 +50,7 @@ export class OnlineLobbyScene extends Phaser.Scene {
             .text(width / 2, height * 0.22, '', {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: CONFIG.FONTS.SIZES.NORMAL,
-                fill: CONFIG.THEME.secondaryStr,
+                color: CONFIG.THEME.secondaryStr,
                 align: 'center',
                 lineSpacing: 10,
                 wordWrap: { width: width * 0.85 },
@@ -105,7 +105,7 @@ export class OnlineLobbyScene extends Phaser.Scene {
                 .text(width / 2, height * 0.52, 'WAITING FOR RIVAL...', {
                     fontFamily: CONFIG.FONTS.MAIN,
                     fontSize: CONFIG.FONTS.SIZES.NORMAL,
-                    fill: CONFIG.THEME.primaryStr,
+                    color: CONFIG.THEME.primaryStr,
                 })
                 .setOrigin(0.5)
         );
@@ -344,7 +344,7 @@ export class OnlineLobbyScene extends Phaser.Scene {
                 .text(width / 2, height * 0.32, text, {
                     fontFamily: CONFIG.FONTS.MAIN,
                     fontSize: '40px',
-                    fill: CONFIG.THEME.primaryStr,
+                    color: CONFIG.THEME.primaryStr,
                 })
                 .setOrigin(0.5)
         );
@@ -365,7 +365,7 @@ export class OnlineLobbyScene extends Phaser.Scene {
             .text(0, 0, label, {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: label === '⌫' ? '32px' : '24px',
-                fill: CONFIG.THEME.primaryStr,
+                color: CONFIG.THEME.primaryStr,
             })
             .setOrigin(0.5);
         container.add([bg, text]);

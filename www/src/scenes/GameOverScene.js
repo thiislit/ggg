@@ -36,7 +36,7 @@ export class GameOverScene extends Phaser.Scene {
             } else if (status === 'CAMPAIGN_COMPLETE') {
                 titleText = 'MISSION STATUS';
                 mainText = 'DAUGHTER SAVED!';
-                color = 0xffd700; // Oro
+                color = '#ffd700'; // Oro
                 isWin = true;
             } else {
                 // RETRY_LEVEL
@@ -57,7 +57,7 @@ export class GameOverScene extends Phaser.Scene {
             .text(width / 2, height * 0.25, titleText, {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: '18px',
-                fill: typeof color === 'number' ? '#' + color.toString(16) : color,
+                color,
                 align: 'center',
             })
             .setOrigin(0.5);
@@ -68,7 +68,7 @@ export class GameOverScene extends Phaser.Scene {
             .text(width / 2, height * 0.35, mainText, {
                 fontFamily: CONFIG.FONTS.MAIN,
                 fontSize: fontSize,
-                fill: typeof color === 'number' ? '#' + color.toString(16) : color,
+                color,
                 align: 'center',
                 wordWrap: { width: width * 0.9 },
             })
@@ -94,7 +94,7 @@ export class GameOverScene extends Phaser.Scene {
                 .text(width / 2, infoY, subMsg, {
                     fontFamily: CONFIG.FONTS.MAIN,
                     fontSize: '14px',
-                    fill: CONFIG.THEME.secondaryStr,
+                    color: CONFIG.THEME.secondaryStr,
                 })
                 .setOrigin(0.5);
         } else if (streak > 0 || isNewRecord) {
@@ -103,7 +103,7 @@ export class GameOverScene extends Phaser.Scene {
                     .text(width / 2, infoY, 'NEW RECORD!', {
                         fontFamily: CONFIG.FONTS.MAIN,
                         fontSize: '22px',
-                        fill: CONFIG.THEME.accentStr,
+                        color: CONFIG.THEME.accentStr,
                     })
                     .setOrigin(0.5);
                 this.tweens.add({
@@ -117,7 +117,7 @@ export class GameOverScene extends Phaser.Scene {
                     .text(width / 2, infoY + 40, `${streak} WINS IN A ROW`, {
                         fontFamily: CONFIG.FONTS.MAIN,
                         fontSize: CONFIG.FONTS.SIZES.NORMAL,
-                        fill: CONFIG.THEME.primaryStr,
+                        color: CONFIG.THEME.primaryStr,
                     })
                     .setOrigin(0.5);
             } else {
@@ -125,7 +125,7 @@ export class GameOverScene extends Phaser.Scene {
                     .text(width / 2, infoY, `CURRENT STREAK: ${streak}`, {
                         fontFamily: CONFIG.FONTS.MAIN,
                         fontSize: '16px',
-                        fill: CONFIG.THEME.secondaryStr,
+                        color: CONFIG.THEME.secondaryStr,
                     })
                     .setOrigin(0.5);
             }
@@ -133,7 +133,10 @@ export class GameOverScene extends Phaser.Scene {
 
         // --- BOTONES ---
         let btnText = 'RESTART';
-        let btnAction = () => this.scene.start('GameScene');
+        /** @type {() => void} */
+        let btnAction = () => {
+            this.scene.start('GameScene');
+        };
 
         if (isOnline) {
             // Volver a la sala para crear otra o unirse (no empezar una partida contra la CPU)

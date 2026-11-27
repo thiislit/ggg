@@ -28,7 +28,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(width / 2, height * 0.07, titleText, {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '26px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5);
 
@@ -45,7 +45,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(centerX, currentY - 90, `HOME: ${this.planets[this.planetIdx]}`, {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '12px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5);
 
@@ -104,7 +104,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(centerX, currentY - 50, 'CODENAME', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '10px',
-                fill: '#888',
+                color: '#888',
             })
             .setOrigin(0.5);
 
@@ -123,7 +123,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(-130, 0, name, {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '18px',
-                fill: colors.ACCENT_STR,
+                color: colors.ACCENT_STR,
             })
             .setOrigin(0, 0.5);
 
@@ -139,7 +139,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(0, 0, 'OK', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '14px',
-                fill: '#000',
+                color: '#000',
             })
             .setOrigin(0.5);
 
@@ -156,7 +156,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(0, 0, '_', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '18px',
-                fill: colors.ACCENT_STR,
+                color: colors.ACCENT_STR,
             })
             .setOrigin(0, 0.5)
             .setVisible(false);
@@ -238,7 +238,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(centerX, currentY - 130, 'UNIT APPEARANCE', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '12px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5);
 
@@ -269,7 +269,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(centerX, currentY - 45, 'BIOLOGICAL TYPE', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '11px',
-                fill: '#888',
+                color: '#888',
             })
             .setOrigin(0.5);
 
@@ -277,7 +277,7 @@ export class ProfileScene extends Phaser.Scene {
             .text(centerX, currentY, this.speciesList[this.speciesIdx], {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '20px',
-                fill: colors.PRIMARY_STR,
+                color: colors.PRIMARY_STR,
             })
             .setOrigin(0.5);
 
@@ -312,7 +312,9 @@ export class ProfileScene extends Phaser.Scene {
             document.body.appendChild(this.hiddenInput);
 
             this.hiddenInput.addEventListener('input', (e) => {
-                let val = e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+                let val = /** @type {HTMLInputElement} */ (e.target).value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9 ]/g, '');
                 this.nameTxt.setText(val);
                 this.updateCursorPosition();
             });
