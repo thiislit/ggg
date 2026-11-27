@@ -1,0 +1,29 @@
+# Line endings: the repository stores LF; keep LF on every OS so Windows
+# (core.autocrlf=true) stops warning "LF will be replaced by CRLF".
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets: never touch line endings or diff them as text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.mp3 binary
+*.ogg binary
+*.wav binary
+*.m4a binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.jar binary
+*.aab binary
+*.apk binary
+*.jks binary
+*.keystore binary
