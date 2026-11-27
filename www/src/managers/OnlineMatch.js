@@ -251,6 +251,15 @@ export class OnlineMatch {
         this.callbacks.onRoundResolved(this.myChoice, this.rivalChoice, this.round);
     }
 
+    /**
+     * Deja de avisar a la escena (ya cerrada) pero sigue respondiendo al rival:
+     * reenvía nuestra jugada si sus reintentos indican que no le llegó.
+     */
+    silence() {
+        this.clearRoundTimer();
+        Object.keys(this.callbacks).forEach((key) => (this.callbacks[key] = () => {}));
+    }
+
     destroy() {
         if (this.destroyed) return;
         this.destroyed = true;

@@ -54,6 +54,7 @@ MainMenuScene ─► OnlineLobbyScene ─► GameScene (+ OnlineVersusController
 - Supabase reconecta solo; `SupabaseOnlineChannel` vuelve a anunciar la presencia (mismo `joinedAt`) y emite `connection`.
 - `OnlineMatch` reenvía cada 2 s lo pendiente y responde a duplicados (marcados `reply` para evitar bucles): un mensaje perdido no congela la partida.
 - Tiempo límite propio por ronda (`setTimeout`): si el temporizador visual de Phaser se congela (app en segundo plano) la ronda se cierra como "no eligió a tiempo".
+- Al terminar la partida la sala sigue abierta **15 s** en segundo plano (`LINGER_MS`): si al rival se le perdió la última jugada, la recupera con sus reintentos en vez de quedarse en "WAITING FOR RIVAL...". Si se abandona a mitad, se cierra al instante.
 - Rival desconectado: aviso y **20 s de gracia** (`RIVAL_GRACE_MS`) para volver; si no vuelve, se regresa a la sala.
 - Sin conexión no se envía nada (evita la vía REST de Supabase y gasto de cuota); los reenvíos recuperan al volver.
 - Comprobado contra el servidor real cortando el WebSocket a mitad de ronda: reconexión ~1 s y resultado idéntico en ambos.

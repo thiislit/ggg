@@ -5,7 +5,11 @@ jest.mock('../../ui/components/DialogueBox.js', () => ({
         .mockImplementation((scene, x, y, text) => ({ text, destroy: jest.fn() })),
 }));
 
-const { OnlineVersusController, RIVAL_GRACE_MS } = require('./OnlineVersusController.js');
+const {
+    OnlineVersusController,
+    RIVAL_GRACE_MS,
+    LINGER_MS,
+} = require('./OnlineVersusController.js');
 const { OnlineChannel } = require('../../managers/OnlineChannel.js');
 const { GAME_STATE } = require('../../constants/game.js');
 
@@ -272,6 +276,61 @@ describe('OnlineVersusController', () => {
 
         expect(scene.activeBubbles).toHaveLength(0);
         expect(scene.scene.start).not.toHaveBeenCalled();
+    });
+
+    it('after the final round, keeps the room open so a rival who lost our reveal still gets the result', () => {
+        const { a, b, flush } = createLinkedChannels();
+        const sceneA = createScene();
+        const sceneB = createScene();
+        const host = new OnlineVersusController(sceneA, { channel: a });
+        const guest = new OnlineVersusController(sceneB, { channel: b });
+        host.build(BUILD);
+        guest.build(BUILD);
+        host.requestRound();
+        guest.requestRound();
+        flush();
+
+        // Microcorte: al invitado no le llega la revelación del anfitrión
+        const send = a.send.bind(a);
+        let dropReveal = true;
+        a.send = (type, data) => {
+            if (type === 'reveal' && dropReveal) return;
+            send(type, data);
+        };
+        guest.lockChoice(2);
+        flush();
+        host.lockChoice(0);
+        flush();
+        expect(sceneA.resolveRound).toHaveBeenCalledWith(0, 2);
+        expect(sceneB.resolveRound).not.toHaveBeenCalled();
+        expect(guest.statusText.text).toBe('WAITING FOR RIVAL...');
+
+        // El anfitrión ganó la partida y se va a GAME OVER (su escena se cierra)
+        sceneA.currentState = GAME_STATE.GAME_OVER;
+        host.destroy();
+        expect(a.closed).toBe(false);
+
+        // Vuelve la red: el reintento del invitado recibe la jugada que le faltaba
+        dropReveal = false;
+        jest.advanceTimersByTime(2000);
+        flush();
+        expect(sceneB.resolveRound).toHaveBeenCalledWith(2, 0);
+        expect(sceneA.resolveRound).toHaveBeenCalledTimes(1); // la escena cerrada no se toca
+
+        jest.advanceTimersByTime(LINGER_MS);
+        expect(a.closed).toBe(true);
+    });
+
+    it('closes the room right away when the match is abandoned midway', () => {
+        const { a } = createLinkedChannels();
+        const scene = createScene();
+        const controller = new OnlineVersusController(scene, { channel: a });
+        controller.build(BUILD);
+        scene.currentState = GAME_STATE.LOCKED;
+
+        controller.destroy();
+
+        expect(a.closed).toBe(true);
     });
 
     it('closes the room when destroyed', () => {

@@ -12,6 +12,24 @@ import { DialogueBox } from '../../ui/components/DialogueBox.js';
 const RETURN_TO_LOBBY_MS = 3000;
 /** Tiempo que se espera a un rival desconectado antes de dar la partida por terminada. */
 export const RIVAL_GRACE_MS = 20000;
+/** Tiempo que la sala sigue abierta tras el final por si al rival le falta la última jugada. */
+export const LINGER_MS = 15000;
+
+/**
+ * Al acabar la partida, quien ve el resultado primero pasa a GAME OVER en unos segundos.
+ * Si en ese momento al rival se le había perdido nuestra última jugada (microcorte de red),
+ * cerrar la sala lo dejaría en "WAITING FOR RIVAL..." sin forma de recuperarla.
+ * Por eso la sala sigue abierta LINGER_MS en segundo plano (sin escena) y OnlineMatch
+ * responde a sus reintentos. No se cierra antes aunque el rival "salga" de la sala:
+ * ese mismo microcorte suele hacer desaparecer su presencia un momento.
+ */
+function lingerThenClose(match, channel, ms = LINGER_MS) {
+    match.silence();
+    setTimeout(() => {
+        match.destroy();
+        channel.close();
+    }, ms);
+}
 
 /**
  * Todo lo específico de Online Versus dentro de GameScene:
@@ -36,6 +54,7 @@ export class OnlineVersusController {
         this.rivalGraceTimer = null;
         this.connectionLost = false;
         this.destroyed = false;
+        this.unsubscribers = [];
     }
 
     /** Oponente que debe mostrar la escena (el otro jugador), o null para usar la CPU. */
@@ -65,13 +84,15 @@ export class OnlineVersusController {
             LAYOUT.getEmojiBarY(footerTop)
         );
 
-        // Los emojis del rival aparecen en su contenedor (el mismo que revela su jugada)
-        this.channel.on('emoji', ({ emoji }) => {
-            this.emojiReactions?.showInDisplay(scene.choiceControls?.onlineRivalDisplay, emoji);
-        });
-        this.channel.on('rival-left', () => this.onRivalLeft());
-        this.channel.on('rival-joined', (rival) => this.onRivalRejoined(rival));
-        this.channel.on('connection', ({ connected }) => this.onConnectionChange(connected));
+        this.unsubscribers = [
+            // Los emojis del rival aparecen en su contenedor (el mismo que revela su jugada)
+            this.channel.on('emoji', ({ emoji }) => {
+                this.emojiReactions?.showInDisplay(scene.choiceControls?.onlineRivalDisplay, emoji);
+            }),
+            this.channel.on('rival-left', () => this.onRivalLeft()),
+            this.channel.on('rival-joined', (rival) => this.onRivalRejoined(rival)),
+            this.channel.on('connection', ({ connected }) => this.onConnectionChange(connected)),
+        ];
 
         if (this.isRealMatch) {
             this.match = new OnlineMatch(this.channel, {
@@ -262,17 +283,27 @@ export class OnlineVersusController {
         }
     }
 
-    /** Cierra la sala y libera todo. GameScene lo llama al apagarse. */
+    /**
+     * Cierra la sala y libera todo. GameScene lo llama al apagarse.
+     * Si la partida terminó normalmente, la sala sigue abierta un rato en segundo plano
+     * (ver `lingerThenClose`); si se abandona a mitad, se cierra ya para que el rival lo sepa.
+     */
     destroy() {
         if (this.destroyed) return;
         this.destroyed = true;
         this.rivalGraceTimer?.remove(false);
         this.rivalGraceTimer = null;
-        this.match?.destroy();
+        this.unsubscribers.forEach((off) => off());
+        this.unsubscribers = [];
+        if (this.match && this.channel && this.isRealMatch && this.isMatchOver()) {
+            lingerThenClose(this.match, this.channel);
+        } else {
+            this.match?.destroy();
+            this.channel?.close();
+        }
         this.match = null;
         this.statusText = null;
         this.alertText = null;
-        this.channel?.close();
         this.channel = null;
         this.emojiReactions?.destroy();
         this.emojiReactions = null;
