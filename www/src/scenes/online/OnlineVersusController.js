@@ -1,0 +1,195 @@
+import { CONFIG } from '../../data/config.js';
+import { LAYOUT } from '../../data/Layout.js';
+import { GAME_STATE } from '../../constants/game.js';
+import { ASSET_KEYS } from '../../constants/AssetKeys.js';
+import { AudioManager } from '../../managers/AudioManager.js';
+import { createOnlineChannel } from '../../managers/OnlineChannel.js';
+import { OnlineMatch } from '../../managers/OnlineMatch.js';
+import { EmojiReactions, REACTION_EMOJIS } from '../../ui/components/EmojiReactions.js';
+import { buildRivalOpponent } from '../../ui/components/CombatParticipants.js';
+import { DialogueBox } from '../../ui/components/DialogueBox.js';
+
+const RETURN_TO_LOBBY_MS = 3000;
+
+/**
+ * Todo lo específico de Online Versus dentro de GameScene:
+ * canal con el rival, panel de emojis, sincronización de rondas y desconexión.
+ *
+ * GameScene solo le avisa de eventos de juego (elegí, pulsé NEXT, cambié de lado...)
+ * y el controlador decide qué hacer. Así Quick Play y Story no dependen del online.
+ *
+ * - Con `channel` (venido de OnlineLobbyScene): partida real contra otra persona.
+ * - Sin `channel`: práctica (PRACTICE) contra la IA con un rival de emojis simulado.
+ */
+export class OnlineVersusController {
+    constructor(scene, { channel = null, rival = null } = {}) {
+        this.scene = scene;
+        this.rival = rival;
+        this.isRealMatch = Boolean(channel);
+        this.channel = channel || createOnlineChannel({ emojis: REACTION_EMOJIS });
+        this.match = null;
+        this.emojiReactions = null;
+        this.statusText = null;
+        this.destroyed = false;
+    }
+
+    /** Oponente que debe mostrar la escena (el otro jugador), o null para usar la CPU. */
+    getOpponent() {
+        return this.isRealMatch && this.rival ? buildRivalOpponent(this.rival) : null;
+    }
+
+    /** true si las rondas las coordina la red en vez de la IA local. */
+    get controlsRounds() {
+        return Boolean(this.match);
+    }
+
+    /** Crea el panel de emojis y engancha los mensajes del rival. Llamar tras crear los controles. */
+    build({ width, footerTop, isPlayerRight }) {
+        const scene = this.scene;
+
+        this.emojiReactions = new EmojiReactions(scene, {
+            emojis: REACTION_EMOJIS,
+            onSend: (emoji) => {
+                AudioManager.playSFX(scene, ASSET_KEYS.AUDIO.SFX_BUTTON);
+                this.channel?.send('emoji', { emoji });
+            },
+        });
+        this.emojiReactions.create(
+            LAYOUT.getOnlinePanelX(width, isPlayerRight),
+            LAYOUT.getOnlineDisplayY(footerTop),
+            LAYOUT.getEmojiBarY(footerTop)
+        );
+
+        // Los emojis del rival aparecen en su contenedor (el mismo que revela su jugada)
+        this.channel.on('emoji', ({ emoji }) => {
+            this.emojiReactions?.showInDisplay(scene.choiceControls?.onlineRivalDisplay, emoji);
+        });
+        this.channel.on('rival-left', () => this.onRivalLeft());
+
+        if (this.isRealMatch) {
+            this.match = new OnlineMatch(this.channel, {
+                onRivalReady: () => {
+                    // Aviso visual: el rival ya pulsó PLAY/NEXT
+                    if (scene.currentState === GAME_STATE.IDLE) {
+                        scene.ui.updateAIIndicator(CONFIG.COLORS.AI_READY_GREEN);
+                    }
+                },
+                onRoundStart: () => scene.startRound(),
+                onRivalLocked: () => scene.ui.updateAIIndicator(CONFIG.COLORS.AI_READY_GREEN),
+                onRoundResolved: (myChoice, rivalChoice) => {
+                    this.hideStatus();
+                    scene.resolveRound(myChoice, rivalChoice);
+                },
+            });
+        }
+    }
+
+    // --- EVENTOS QUE AVISA GameScene ---
+
+    /** PLAY/NEXT pulsado: avisar al rival y esperar a que él también esté listo. */
+    requestRound() {
+        if (!this.match || this.match.meReady) return;
+        const scene = this.scene;
+        if (scene.nextRondaBtn) {
+            scene.nextRondaBtn.destroy();
+            scene.nextRondaBtn = null;
+        }
+        this.showStatus('WAITING FOR RIVAL...');
+        this.match.markReady(); // Si el rival ya estaba listo, la ronda empieza aquí mismo
+    }
+
+    onRoundStarted() {
+        this.hideStatus();
+    }
+
+    /** El jugador eligió (o se le acabó el tiempo: -1). Se resuelve al llegar ambas jugadas. */
+    lockChoice(choice) {
+        const scene = this.scene;
+        scene.setState(GAME_STATE.LOCKED);
+        scene.ui.stopTimer();
+        this.match.lock(choice);
+        if (!this.match.resolved) this.showStatus('WAITING FOR RIVAL...');
+    }
+
+    /** Vuelta a IDLE tras una ronda: el indicador vuelve a rojo hasta que el rival pulse NEXT. */
+    onBackToIdle() {
+        if (this.match && !this.match.rivalReady) this.scene.ui.resetAIIndicator();
+    }
+
+    onSwitchSides(width, isPlayerRight) {
+        this.emojiReactions?.move(LAYOUT.getOnlinePanelX(width, isPlayerRight));
+    }
+
+    applyTheme() {
+        this.emojiReactions?.applyTheme();
+    }
+
+    // --- INTERNOS ---
+
+    showStatus(text) {
+        const scene = this.scene;
+        if (!this.statusText) {
+            const { width } = scene.scale;
+            this.statusText = scene.add
+                .text(width / 2, scene.barY - 40, '', {
+                    fontFamily: CONFIG.FONTS.MAIN,
+                    fontSize: CONFIG.FONTS.SIZES.NORMAL,
+                    fill: CONFIG.THEME.primaryStr,
+                    backgroundColor: '#000000',
+                    padding: { x: 12, y: 8 },
+                })
+                .setOrigin(0.5)
+                .setDepth(2100);
+            scene.tweens.add({
+                targets: this.statusText,
+                alpha: 0.4,
+                duration: 600,
+                yoyo: true,
+                repeat: -1,
+            });
+        }
+        this.statusText.setText(text).setVisible(true);
+    }
+
+    hideStatus() {
+        this.statusText?.setVisible(false);
+    }
+
+    onRivalLeft() {
+        const scene = this.scene;
+        // Al terminar la partida ambos salen de la sala: eso no es un abandono
+        if ([GAME_STATE.FATALITY, GAME_STATE.GAME_OVER].includes(scene.currentState)) return;
+
+        const { width, height } = scene.scale;
+        const notice = new DialogueBox(
+            scene,
+            width / 2,
+            height / 2,
+            'YOUR RIVAL LEFT THE ROOM',
+            CONFIG.COLORS.CPU_RED
+        );
+        if (!scene.activeBubbles) scene.activeBubbles = [];
+        scene.activeBubbles.push(notice);
+
+        if (this.isRealMatch) {
+            this.match?.destroy();
+            this.match = null;
+            this.hideStatus();
+            scene.setState(GAME_STATE.GAME_OVER);
+            scene.time.delayedCall(RETURN_TO_LOBBY_MS, () => scene.scene.start('OnlineLobbyScene'));
+        }
+    }
+
+    /** Cierra la sala y libera todo. GameScene lo llama al apagarse. */
+    destroy() {
+        if (this.destroyed) return;
+        this.destroyed = true;
+        this.match?.destroy();
+        this.match = null;
+        this.statusText = null;
+        this.channel?.close();
+        this.channel = null;
+        this.emojiReactions?.destroy();
+        this.emojiReactions = null;
+    }
+}

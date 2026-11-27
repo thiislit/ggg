@@ -15,10 +15,7 @@ import { TutorialManager } from '../managers/TutorialManager.js'; // Import Tuto
 import { ChoiceControls } from '../ui/components/ChoiceControls.js';
 import { GAME_STATE } from '../constants/game.js';
 import { GameStateManager } from '../managers/GameStateManager.js';
-import { EmojiReactions, REACTION_EMOJIS } from '../ui/components/EmojiReactions.js';
-import { createOnlineChannel } from '../managers/OnlineChannel.js';
-import { OnlineMatch } from '../managers/OnlineMatch.js';
-import { buildRivalOpponent } from '../ui/components/CombatParticipants.js';
+import { OnlineVersusController } from './online/OnlineVersusController.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -36,8 +33,7 @@ export class GameScene extends Phaser.Scene {
         this.isPlayerRight = false; // Loaded in create
 
         this.currentOpponent = null; // Store current opponent for dialogues
-        this.onlineMatch = null; // Sincronización de rondas en Online Versus real
-        this.onlineStatusText = null;
+        this.online = null; // OnlineVersusController (solo en Online Versus)
         this.shakeEvent = null; // Timer event for continuous camera shake
     }
 
@@ -71,14 +67,17 @@ export class GameScene extends Phaser.Scene {
 
     async create(data = {}) {
         this.isOnline = !!data.isOnline;
-        // Canal ya conectado desde OnlineLobbyScene (null = práctica con rival simulado)
-        this.providedChannel = data.channel || null;
-        this.rivalProfile = data.rival || null;
+        // Online Versus: canal ya conectado desde OnlineLobbyScene (sin canal = PRACTICE)
+        this.online = this.isOnline
+            ? new OnlineVersusController(this, { channel: data.channel, rival: data.rival })
+            : null;
 
-        // Phaser conserva los datos de inicio si la escena se vuelve a abrir SIN datos
-        // (scene.start('GameScene')). Sin esto, Quick Play o Historia heredarían
-        // { isOnline, channel, rival } de la última partida online.
         this.events.once('shutdown', () => {
+            this.online?.destroy(); // Cierra la sala online
+            this.online = null;
+            // Phaser conserva los datos de inicio si la escena se vuelve a abrir SIN datos
+            // (scene.start('GameScene')). Sin esto, Quick Play o Historia heredarían
+            // { isOnline, channel, rival } de la última partida online.
             this.sys.settings.data = {};
         });
 
@@ -158,9 +157,9 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Partida online real: el oponente es el otro jugador, no la CPU
-        this.isRealOnlineMatch = this.isOnline && Boolean(this.providedChannel);
-        if (this.isRealOnlineMatch && this.rivalProfile) {
-            enemy = buildRivalOpponent(this.rivalProfile);
+        const onlineOpponent = this.online?.getOpponent();
+        if (onlineOpponent) {
+            enemy = onlineOpponent;
             this.p2Health = enemy.stats.health;
             this.cpuName = enemy.name;
         }
@@ -240,13 +239,7 @@ export class GameScene extends Phaser.Scene {
         this.ui.initControls(width, height, 20);
 
         // 5. Panel de emojis entre jugadores en la parte inferior (solo Online Versus)
-        if (this.isOnline) {
-            this.setupEmojiReactions(
-                LAYOUT.getOnlinePanelX(width, this.isPlayerRight),
-                LAYOUT.getOnlineDisplayY(FOOT_Y),
-                LAYOUT.getEmojiBarY(FOOT_Y)
-            );
-        }
+        this.online?.build({ width, footerTop: FOOT_Y, isPlayerRight: this.isPlayerRight });
 
         // Posicionar el indicador de la IA inicialmente
         let indicatorBtnRef; // Referencia al botón (mute o config)
@@ -306,9 +299,9 @@ export class GameScene extends Phaser.Scene {
         this.resetButtonColors();
         this.ui.resetAIIndicator(); // Reiniciar el indicador de la IA a rojo
 
-        if (this.onlineMatch) {
-            // Online real: el indicador se pone verde cuando el rival elige (onRivalLocked)
-            this.hideOnlineStatus();
+        if (this.online?.controlsRounds) {
+            // Online real: el indicador se pone verde cuando el rival elige
+            this.online.onRoundStarted();
         } else {
             // La IA elige su movimiento en los primeros segundos (hasta 3 segundos)
             this.time.delayedCall(Phaser.Math.Between(100, 3000), () => {
@@ -328,8 +321,8 @@ export class GameScene extends Phaser.Scene {
         this.ui.runTimer(CONFIG.TIMING.ROUND_DURATION, () => {
             // Callback si se acaba el tiempo
             if (this.currentState === GAME_STATE.COUNTDOWN) {
-                if (this.onlineMatch) {
-                    this.lockOnlineChoice(-1);
+                if (this.online?.controlsRounds) {
+                    this.online.lockChoice(-1);
                 } else {
                     this.resolveRound(-1);
                 }
@@ -370,22 +363,14 @@ export class GameScene extends Phaser.Scene {
             if (txt) txt.setFill('#000000');
         }
 
-        if (this.onlineMatch) {
+        if (this.online?.controlsRounds) {
             // Online real: enviar la jugada (comprometida) y esperar la del rival
-            this.lockOnlineChoice(index);
+            this.online.lockChoice(index);
             return;
         }
 
         // Pequeño delay dramático antes de resolver
         this.time.delayedCall(800, () => this.resolveRound(index));
-    }
-
-    /** Envía nuestra jugada al rival; la ronda se resuelve cuando llegan ambas (onRoundResolved). */
-    lockOnlineChoice(choice) {
-        this.setState(GAME_STATE.LOCKED);
-        this.ui.stopTimer();
-        this.onlineMatch.lock(choice);
-        if (!this.onlineMatch.resolved) this.showOnlineStatus('WAITING FOR RIVAL...');
     }
 
     resolveRound(playerChoice, rivalChoice = this.cpuChoiceThisRound) {
@@ -463,9 +448,7 @@ export class GameScene extends Phaser.Scene {
                     // Esperar un poco y mostrar botón NEXT
                     this.nextRoundTimer = this.time.delayedCall(800, () => {
                         this.setState(GAME_STATE.IDLE); // Volvemos a IDLE
-                        if (this.onlineMatch && !this.onlineMatch.rivalReady) {
-                            this.ui.resetAIIndicator(); // Verde de nuevo cuando el rival pulse NEXT
-                        }
+                        this.online?.onBackToIdle(); // Online: indicador rojo hasta que el rival pulse NEXT
                         this.nextRondaBtn = this.ui.createNextRondaBtn('NEXT', this.barY);
                         this.setupNextRoundBtnListeners();
                     });
@@ -567,127 +550,12 @@ export class GameScene extends Phaser.Scene {
         this.nextRondaBtn.on('pointerup', () => {
             // Solo actuar si estamos en IDLE (prevención de doble click)
             if (this.currentState !== GAME_STATE.IDLE) return;
-            if (this.onlineMatch) {
-                this.requestOnlineRound();
+            if (this.online?.controlsRounds) {
+                this.online.requestRound();
             } else {
                 this.startRound();
             }
         });
-    }
-
-    setupEmojiReactions(x, displayY, barY) {
-        this.teardownEmojiReactions();
-
-        this.onlineChannel =
-            this.providedChannel || createOnlineChannel({ emojis: REACTION_EMOJIS });
-        this.providedChannel = null; // La escena pasa a ser dueña del canal (lo cierra al salir)
-        this.emojiReactions = new EmojiReactions(this, {
-            emojis: REACTION_EMOJIS,
-            onSend: (emoji) => {
-                AudioManager.playSFX(this, ASSET_KEYS.AUDIO.SFX_BUTTON);
-                this.onlineChannel?.send('emoji', { emoji });
-            },
-        });
-        this.emojiReactions.create(x, displayY, barY);
-
-        // Los emojis del rival aparecen en su contenedor (el mismo que revela su jugada)
-        this.onlineChannel.on('emoji', ({ emoji }) => {
-            this.emojiReactions?.showInDisplay(this.choiceControls?.onlineRivalDisplay, emoji);
-        });
-
-        this.onlineChannel.on('rival-left', () => this.onRivalLeft());
-
-        if (this.isRealOnlineMatch) {
-            this.onlineMatch = new OnlineMatch(this.onlineChannel, {
-                onRivalReady: () => {
-                    // Aviso visual: el rival ya pulsó PLAY/NEXT
-                    if (this.currentState === GAME_STATE.IDLE) {
-                        this.ui.updateAIIndicator(CONFIG.COLORS.AI_READY_GREEN);
-                    }
-                },
-                onRoundStart: () => this.startRound(),
-                onRivalLocked: () => this.ui.updateAIIndicator(CONFIG.COLORS.AI_READY_GREEN),
-                onRoundResolved: (myChoice, rivalChoice) => {
-                    this.hideOnlineStatus();
-                    this.resolveRound(myChoice, rivalChoice);
-                },
-            });
-        }
-
-        this.events.once('shutdown', () => this.teardownEmojiReactions());
-    }
-
-    /** PLAY/NEXT en online: avisar al rival y esperar a que él también esté listo. */
-    requestOnlineRound() {
-        if (!this.onlineMatch || this.onlineMatch.meReady) return;
-        if (this.nextRondaBtn) {
-            this.nextRondaBtn.destroy();
-            this.nextRondaBtn = null;
-        }
-        this.showOnlineStatus('WAITING FOR RIVAL...');
-        this.onlineMatch.markReady(); // Si el rival ya estaba listo, la ronda empieza aquí mismo
-    }
-
-    showOnlineStatus(text) {
-        if (!this.onlineStatusText) {
-            const { width } = this.scale;
-            this.onlineStatusText = this.add
-                .text(width / 2, this.barY - 40, '', {
-                    fontFamily: CONFIG.FONTS.MAIN,
-                    fontSize: CONFIG.FONTS.SIZES.NORMAL,
-                    fill: CONFIG.THEME.primaryStr,
-                    backgroundColor: '#000000',
-                    padding: { x: 12, y: 8 },
-                })
-                .setOrigin(0.5)
-                .setDepth(2100);
-            this.tweens.add({
-                targets: this.onlineStatusText,
-                alpha: 0.4,
-                duration: 600,
-                yoyo: true,
-                repeat: -1,
-            });
-        }
-        this.onlineStatusText.setText(text).setVisible(true);
-    }
-
-    hideOnlineStatus() {
-        this.onlineStatusText?.setVisible(false);
-    }
-
-    onRivalLeft() {
-        // Al terminar la partida ambos salen de la sala: eso no es un abandono
-        if ([GAME_STATE.FATALITY, GAME_STATE.GAME_OVER].includes(this.currentState)) return;
-
-        const { width, height } = this.scale;
-        const notice = new DialogueBox(
-            this,
-            width / 2,
-            height / 2,
-            'YOUR RIVAL LEFT THE ROOM',
-            CONFIG.COLORS.CPU_RED
-        );
-        if (!this.activeBubbles) this.activeBubbles = [];
-        this.activeBubbles.push(notice);
-
-        if (this.isRealOnlineMatch) {
-            this.onlineMatch?.destroy();
-            this.onlineMatch = null;
-            this.hideOnlineStatus();
-            this.setState(GAME_STATE.GAME_OVER);
-            this.time.delayedCall(3000, () => this.scene.start('OnlineLobbyScene'));
-        }
-    }
-
-    teardownEmojiReactions() {
-        this.onlineMatch?.destroy();
-        this.onlineMatch = null;
-        this.onlineStatusText = null;
-        this.onlineChannel?.close();
-        this.onlineChannel = null;
-        this.emojiReactions?.destroy();
-        this.emojiReactions = null;
     }
 
     switchSides() {
@@ -756,7 +624,7 @@ export class GameScene extends Phaser.Scene {
 
         // Mover botones y textos
         this.choiceControls.move(this.isPlayerRight, width);
-        this.emojiReactions?.move(LAYOUT.getOnlinePanelX(width, this.isPlayerRight));
+        this.online?.onSwitchSides(width, this.isPlayerRight);
         this.tweens.add({
             targets: this.timeText1,
             x: LAYOUT.getColumnX(width, true),
@@ -836,7 +704,7 @@ export class GameScene extends Phaser.Scene {
         this.ui.applyTheme();
 
         this.choiceControls.applyTheme();
-        this.emojiReactions?.applyTheme();
+        this.online?.applyTheme();
 
         this.updateMuteIcon();
     }
