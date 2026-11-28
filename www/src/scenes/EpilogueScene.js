@@ -4,6 +4,7 @@ import { DataManager } from '../managers/DataManager.js';
 import { DialogueBox } from '../ui/components/DialogueBox.js';
 import { RetroButton } from '../ui/components/RetroButton.js';
 import { AudioManager } from '../managers/AudioManager.js';
+import { CREDITS } from '../data/Credits.js';
 
 export class EpilogueScene extends Phaser.Scene {
     constructor() {
@@ -128,7 +129,8 @@ export class EpilogueScene extends Phaser.Scene {
     }
 
     handleInput() {
-        if (this.endButton) return;
+        // Durante los créditos los toques solo aceleran el scroll (antes relanzaban la transición)
+        if (this.endButton || this.inCredits) return;
         if (this.isTyping) {
             if (this.currentDialogueBox) this.currentDialogueBox.forceComplete();
         } else {
@@ -186,9 +188,12 @@ export class EpilogueScene extends Phaser.Scene {
     }
 
     transitionToCredits() {
+        if (this.inCredits) return;
+        this.inCredits = true;
         // Ocultar todo antes de la transición
         if (this.activeCharacter) this.activeCharacter.setAlpha(0);
-        this.tapText.setAlpha(0);
+        this.tweens.killTweensOf(this.tapText);
+        this.tapText.setVisible(false);
 
         this.cameras.main.fadeOut(1000, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -198,58 +203,102 @@ export class EpilogueScene extends Phaser.Scene {
 
     startCredits() {
         const { width, height } = this.scale;
+        this.inCredits = true;
+        if (this.heartTimer) {
+            this.heartTimer.destroy();
+            this.heartTimer = null;
+        }
 
-        // Fondo negro sólido
-        this.add.rectangle(0, 0, width, height, 0x000000).setOrigin(0).setDepth(5000);
-        this.cameras.main.fadeIn(500, 0, 0, 0);
+        // Velo oscuro: el espacio del fondo se intuye detrás sin restar legibilidad
+        this.add.rectangle(0, 0, width, height, 0x000000, 0.88).setOrigin(0).setDepth(5000);
+        this.cameras.main.fadeIn(800, 0, 0, 0);
 
-        const credits = [
-            'RPS RETRO',
-            '',
-            'A GAME BY',
-            'AXEL',
-            '',
-            'POWERED BY',
-            'PHASER & CAPACITOR',
-            '',
-            'THANK YOU FOR PLAYING!',
-        ];
-
-        const creditsContainer = this.add.container(width / 2, height + 100).setDepth(6000);
-
-        credits.forEach((line, i) => {
-            const isTitle = i === 0 || i === credits.length - 1;
-            const txt = this.add
-                .text(0, i * 100, line, {
-                    fontFamily: CONFIG.FONTS.MAIN,
-                    fontSize: isTitle ? '28px' : '18px',
-                    color: isTitle ? CONFIG.THEME.primaryStr : '#ffffff',
-                    stroke: '#000000',
-                    strokeThickness: 6, // Borde negro grueso para evitar que las letras se intercalen
-                    align: 'center',
-                })
-                .setOrigin(0.5);
-            creditsContainer.add(txt);
+        const content = this.add.container(width / 2, height + 60).setDepth(6000);
+        const textStyle = (size, color) => ({
+            fontFamily: CONFIG.FONTS.MAIN,
+            fontSize: size,
+            color,
+            align: 'center',
+            lineSpacing: 12,
+            stroke: '#000000',
+            strokeThickness: 4,
         });
+        let y = 0;
+        const addLine = (text, size, color, gapAfter) => {
+            const line = this.add.text(0, y, text, textStyle(size, color)).setOrigin(0.5, 0);
+            content.add(line);
+            y += line.height + gapAfter;
+            return line;
+        };
+        const addDivider = () => {
+            content.add(this.add.rectangle(0, y, 120, 3, CONFIG.THEME.primary, 0.8));
+            y += 70;
+        };
 
-        this.tweens.add({
-            targets: creditsContainer,
-            y: -(credits.length * 110),
-            duration: 18000, // Más lento aún para máxima legibilidad
+        // Título
+        addLine(CREDITS.TITLE, '40px', CONFIG.THEME.primaryStr, 16);
+        addLine(CREDITS.VERSION, '12px', '#888888', 60);
+        addDivider();
+
+        // Secciones
+        CREDITS.SECTIONS.forEach(({ heading, names }) => {
+            addLine(heading, '14px', CONFIG.THEME.secondaryStr, 22);
+            names.forEach((name, i) =>
+                addLine(name, '20px', '#ffffff', i === names.length - 1 ? 80 : 14)
+            );
+        });
+        addDivider();
+
+        // Mensaje del creador
+        addLine(CREDITS.MESSAGE, '16px', CONFIG.THEME.accentStr, 24);
+        addLine(`— ${CREDITS.AUTHOR}`, '12px', '#aaaaaa', 90);
+
+        // Contacto
+        addLine('CONTACT', '14px', CONFIG.THEME.secondaryStr, 22);
+        CREDITS.CONTACT.forEach(({ label, value }, i) => {
+            addLine(label, '10px', '#888888', 10);
+            addLine(value, '14px', '#ffffff', i === CREDITS.CONTACT.length - 1 ? 90 : 30);
+        });
+        addLine(`© ${CREDITS.YEAR} ${CREDITS.AUTHOR}`, '10px', '#666666', 0);
+
+        // Velocidad constante de lectura; mantener pulsado acelera
+        const distance = height + 60 + y;
+        const scroll = this.tweens.add({
+            targets: content,
+            y: -y - 40,
+            duration: (distance / 75) * 1000, // ~75 px por segundo
             ease: 'Linear',
-            onComplete: () => {
-                this.endButton = new RetroButton(
-                    this,
-                    width / 2,
-                    height / 2,
-                    'MAIN MENU',
-                    CONFIG.THEME.primary,
-                    () => {
-                        if (this.heartTimer) this.heartTimer.destroy();
-                        this.scene.start('MainMenuScene');
-                    }
-                ).setDepth(7000);
-            },
+            onComplete: () => this.showCreditsEnd(),
+        });
+        this.input.on('pointerdown', () => scroll.isPlaying() && scroll.setTimeScale(4));
+        this.input.on('pointerup', () => scroll.setTimeScale(1));
+    }
+
+    /** Cierre de los créditos: agradecimiento centrado y botón al menú. */
+    showCreditsEnd() {
+        const { width, height } = this.scale;
+        const thanks = this.add
+            .text(width / 2, height * 0.4, 'THANK YOU\nFOR PLAYING!', {
+                fontFamily: CONFIG.FONTS.MAIN,
+                fontSize: '28px',
+                color: CONFIG.THEME.primaryStr,
+                align: 'center',
+                lineSpacing: 16,
+            })
+            .setOrigin(0.5)
+            .setDepth(6000)
+            .setAlpha(0);
+        this.tweens.add({ targets: thanks, alpha: 1, duration: 1200 });
+
+        this.time.delayedCall(1200, () => {
+            this.endButton = new RetroButton(
+                this,
+                width / 2,
+                height * 0.62,
+                'MAIN MENU',
+                CONFIG.THEME.primary,
+                () => this.scene.start('MainMenuScene')
+            ).setDepth(7000);
         });
     }
 }

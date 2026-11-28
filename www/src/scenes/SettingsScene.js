@@ -1,6 +1,7 @@
 import { DataManager } from '../managers/DataManager.js';
 import { AudioManager } from '../managers/AudioManager.js';
 import { CONFIG } from '../data/config.js';
+import { CREDITS } from '../data/Credits.js';
 import { ASSET_KEYS } from '../constants/AssetKeys.js';
 import { Switch } from '../ui/components/Switch.js';
 import { Slider } from '../ui/components/Slider.js';
@@ -319,16 +320,29 @@ export class SettingsScene extends Phaser.Scene {
                     return;
                 }
                 this.creditsText = this.add
-                    .text(width / 2, height * 0.5, 'DEV: AXEL\nPHASER 3\nv1.1', {
-                        fontFamily: '"Press Start 2P"',
-                        fontSize: '12px',
-                        color: colors.ACCENT_STR,
-                        align: 'center',
-                        backgroundColor: colors.BG_STR,
-                    })
+                    .text(
+                        width / 2,
+                        height * 0.5,
+                        [
+                            `${CREDITS.TITLE} ${CREDITS.VERSION}`,
+                            '',
+                            `A GAME BY ${CREDITS.AUTHOR}`,
+                            '',
+                            ...CREDITS.CONTACT.map((c) => c.value),
+                        ].join('\n'),
+                        {
+                            fontFamily: '"Press Start 2P"',
+                            fontSize: '12px',
+                            color: colors.ACCENT_STR,
+                            align: 'center',
+                            lineSpacing: 8,
+                            backgroundColor: colors.BG_STR,
+                            padding: { x: 20, y: 16 },
+                        }
+                    )
                     .setOrigin(0.5)
                     .setDepth(100);
-                this.time.delayedCall(2000, () => {
+                this.time.delayedCall(4000, () => {
                     if (this.creditsText) this.creditsText.destroy();
                     this.creditsText = null;
                 });
