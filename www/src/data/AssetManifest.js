@@ -71,7 +71,6 @@ export const ASSETS = {
             { key: 'robert_normal', path: 'assets/story/robert_normal.png' },
             { key: 'robert_sad', path: 'assets/story/robert_sad.png' },
             { key: 'robert_smile', path: 'assets/story/robert_smile.png' },
-            { key: 'story_bg', path: 'assets/story/galaxy_bg.png' },
             { key: 'princess_1', path: 'assets/images/story/princess_1.png' },
             { key: 'princess_2', path: 'assets/images/story/princess_2.png' },
             { key: 'princess_3', path: 'assets/images/story/princess_3.png' },

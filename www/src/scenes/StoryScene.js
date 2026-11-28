@@ -79,20 +79,9 @@ export class StoryScene extends Phaser.Scene {
 
         // La animación de la galaxia se crea globalmente en SplashScene
 
-        // 0. Fondo Base Estático
-        this.mainBg = this.add
-            .image(width / 2, height / 2, ASSET_KEYS.IMAGES.STORY_BG)
-            .setDisplaySize(width, height)
-            .setAlpha(0.6);
-
-        this.tweens.add({
-            targets: this.mainBg,
-            scale: 1.1,
-            duration: 20000,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-        });
+        // El fondo espacial lo pone BackgroundScene (debajo). Aquí no se pinta galaxy_bg.png
+        // como imagen: es una hoja de sprites de 20x20 fotogramas y se veía como una
+        // cuadrícula de galaxias pequeñas sobre toda la pantalla.
 
         // Sprite de Galaxia (Oculto al inicio)
         this.galaxy = this.add
@@ -363,7 +352,7 @@ export class StoryScene extends Phaser.Scene {
         AudioManager.playSFX(this, ASSET_KEYS.AUDIO.STORY_SFX_END, { volume: 0.8 });
 
         this.tweens.add({
-            targets: [this.robert, this.textBox, this.mainBg, this.galaxy],
+            targets: [this.robert, this.textBox, this.galaxy],
             scaleY: 0.01,
             alpha: 0,
             duration: 300,

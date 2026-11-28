@@ -64,7 +64,6 @@ export const ASSET_KEYS = {
         STORY_ROBERT_NORMAL: 'robert_normal',
         STORY_ROBERT_SAD: 'robert_sad',
         STORY_ROBERT_SMILE: 'robert_smile',
-        STORY_BG: 'story_bg',
     },
     SPRITESHEETS: {
         PLANET_TIERRA: 'planet_tierra',
