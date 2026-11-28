@@ -23,6 +23,7 @@ export const CREDITS = {
         { heading: 'A GAME BY', names: ['AXEL'] },
         { heading: 'GAME DESIGN\n& PROGRAMMING', names: ['AXEL'] },
         { heading: 'BUILT WITH', names: ['PHASER 3', 'CAPACITOR', 'SUPABASE'] },
+        { heading: 'SPACE BACKGROUNDS', names: ['GENERATED WITH TOOLS', 'BY DEEP-FOLD'] },
         { heading: 'FONT', names: ['PRESS START 2P', 'BY CODEMAN38'] },
         { heading: 'SPECIAL THANKS', names: ['EVERY PLAYER WHO', 'MADE IT THIS FAR'] },
     ],
